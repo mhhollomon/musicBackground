@@ -5,6 +5,9 @@
 import argparse
 
 from PIL import Image
+from PIL import ImageDraw
+from PIL import ImageFont
+
 import sys
 import os
 
@@ -12,7 +15,15 @@ IMAGE_HEIGHT = 1080
 IMAGE_WIDTH = 1920
 LOGO_SIZE = 200
 
-def resize_and_square(image_path  : str , output_path : str, logo_path : str | None):
+def _get_text_size(text : str, font : ImageFont.FreeTypeFont):
+    img = Image.new("RGB", (1, 1))
+    draw = ImageDraw.Draw(img)
+    box = draw.multiline_textbbox((0,0), text=text, font=font)
+    #offset = (-box[0], -box[1])
+    size = (box[2]-box[0], box[3]-box[1])
+    return size
+
+def resize_and_square(image_path  : str , output_path : str, logo_path : str | None, logo_size : int):
     # Open the image
     with Image.open(image_path) as img:
         # Get the original dimensions
@@ -43,7 +54,7 @@ def resize_and_square(image_path  : str , output_path : str, logo_path : str | N
                 # Get the logo dimensions
                 logo_width, logo_height = logo.size
 
-                resized_logo = logo.resize((int(logo_width * (LOGO_SIZE / logo_height)), LOGO_SIZE))
+                resized_logo = logo.resize((int(logo_width * (logo_size / logo_height)), logo_size))
                 logo_width, logo_height = resized_logo.size
 
                 # Calculate the offset
@@ -53,6 +64,15 @@ def resize_and_square(image_path  : str , output_path : str, logo_path : str | N
                 # Paste the logo
                 img.paste(resized_logo, (width_offset, height_offset))
 
+        draw = ImageDraw.Draw(img)
+
+        myFont = ImageFont.truetype('DejaVuSans.ttf', 200)
+        text_size = _get_text_size("Hello", myFont)
+
+        print(f"text_size = {text_size}")
+
+        draw.text((IMAGE_WIDTH - text_size[0] - 10, 10), "Hello", font=myFont, fill=(255,255,255))
+
         # Save the image
         img.save(output_path)
 
@@ -61,6 +81,7 @@ def build_arg_parser() -> argparse.ArgumentParser:
     parser.add_argument("--image_path", type=str, required=True)
     parser.add_argument("--output_path", type=str, required=True)
     parser.add_argument("--logo", type=str, required=False, default=None)
+    parser.add_argument("--logo_size", type=int, default=LOGO_SIZE)
     return parser
 
 if __name__ == "__main__":
@@ -74,4 +95,4 @@ if __name__ == "__main__":
         print(f"The image file {args.image_path} does not exist.")
         sys.exit(1)
 
-    resize_and_square(args.image_path, args.output_path, args.logo)
+    resize_and_square(args.image_path, args.output_path, args.logo, args.logo_size)
