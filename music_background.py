@@ -3,6 +3,9 @@
 # ./music_background.py --image_path /mnt/c/DAW/REAPER/2026/JMPR\ 2026-05-02/JMPR_detail.jpg --output_path ./output_file.jpg --logo /mnt/c/Users/mhhol/Desktop/More\ Stuff/viking-treble-clef-small.png
 
 import argparse
+from dataclasses import dataclass
+import json
+from typing import Any
 
 from PIL import Image
 from PIL import ImageDraw
@@ -15,75 +18,96 @@ IMAGE_HEIGHT = 1080
 IMAGE_WIDTH = 1920
 LOGO_SIZE = 200
 TITLE_FONT_SIZE = 200
+GUTTER_SIZE = 10
 
-def _get_text_size(text : str, font : ImageFont.FreeTypeFont):
+@dataclass
+class geometry :
+    width : int
+    height : int
+
+    def to_tuple(self) -> tuple :
+        return (self.width, self.height)
+
+def _get_text_size(text : str, font : ImageFont.FreeTypeFont) -> geometry:
     img = Image.new("RGB", (1, 1))
     draw = ImageDraw.Draw(img)
     box = draw.multiline_textbbox((0,0), text=text, font=font)
-    #offset = (-box[0], -box[1])
-    size = (box[2]-box[0], box[3]-box[1])
+    size = geometry(int(box[2]-box[0]), int(box[3]-box[1]))
     return size
 
-def resize_and_square(image_path  : str , output_path : str, logo_path : str | None, logo_size : int, text : str | None):
+def resize_and_square(config : Any) :
     # Open the image
-    with Image.open(image_path) as img:
+    output_path = config['output']['path']
+    out_image_size = config['image']['size']
+    with Image.open(config['input']['path']) as cover_img:
         # Get the original dimensions
-        original_width, original_height = img.size
+        original_width, original_height = cover_img.size
+
+        # We want to 
+        # 1. resize the cover so that it is the same height as the output image while keeping the aspect ratio
+        # 2. If necessary, crop the cover so that it is square.
+        #
+        # We don't currently handle "tall" covers.
 
         # Calculate the new width while keeping the aspect ratio
-        new_width = int(IMAGE_HEIGHT * (original_width / original_height))
+        new_width = int(out_image_size.width * (original_width / original_height))
 
         # Resize the image
-        img = img.resize((new_width, IMAGE_HEIGHT))
+        cover_img = cover_img.resize((new_width, out_image_size.height))
 
-        # Calculate the new dimensions
-        new_width, new_height = img.size
+        # Find the new dimensions
+        new_width, new_height = cover_img.size
 
-        # Calculate the offset
-        offset = (new_width - IMAGE_HEIGHT) // 2
+        # Crop the image if necessary
+        if new_width > out_image_size.height:
+            offset = (new_width - out_image_size.height) // 2
+            # Crop off the left side
+            cover_img = cover_img.crop((offset, 0, out_image_size.height + offset, new_height))
 
-        # Crop or extend the image
-        if new_width > 1080:
-            img = img.crop((offset, 0, IMAGE_HEIGHT + offset, new_height))
-        new_image = Image.new("RGB", (IMAGE_WIDTH, IMAGE_HEIGHT), (0, 0, 0))
-        new_image.paste(img, (0, 0))
-        img = new_image
+        output_img = Image.new("RGB", out_image_size.to_tuple(), (0, 0, 0))
+        output_img.paste(cover_img, (0, 0))
 
-        if logo_path is not None:
+        logo_config = config.get('logo', None)
+
+        if logo_config is not None:
             # Open the logo
-            with Image.open(logo_path) as logo:
+            with Image.open(logo_config['path']) as logo:
                 # Get the logo dimensions
                 logo_width, logo_height = logo.size
 
-                resized_logo = logo.resize((int(logo_width * (logo_size / logo_height)), logo_size))
+                resized_logo = logo.resize((int(logo_width * (logo_config['size'] / logo_height)), logo_config['size']))
                 logo_width, logo_height = resized_logo.size
 
                 # Calculate the offset
-                width_offset = IMAGE_WIDTH - logo_width - 10
-                height_offset = IMAGE_HEIGHT - logo_height - 10
+                width_offset = IMAGE_WIDTH - logo_width - GUTTER_SIZE
+                height_offset = IMAGE_HEIGHT - logo_height - GUTTER_SIZE
 
                 # Paste the logo
-                img.paste(resized_logo, (width_offset, height_offset))
+                output_img.paste(resized_logo, (width_offset, height_offset))
 
-        if text is not None:
-            draw = ImageDraw.Draw(img)
+        text_config = config.get('text', None)
+        if text_config is not None:
+            draw = ImageDraw.Draw(output_img)
             myFont = ImageFont.truetype('DejaVuSans.ttf', TITLE_FONT_SIZE)
-            text_size = _get_text_size(text, myFont)
+            text_size = _get_text_size(text_config['text'], myFont)
 
             print(f"text_size = {text_size}")
 
-            max_text_width = IMAGE_WIDTH-IMAGE_HEIGHT - 20
-            if (text_size[0] > max_text_width):
-                myFont = ImageFont.truetype('DejaVuSans.ttf', TITLE_FONT_SIZE * (max_text_width / text_size[0]))
-                text_size = _get_text_size(text, myFont)
+            max_text_width = out_image_size.width - out_image_size.height - (GUTTER_SIZE * 2)
+            if (text_size.width > max_text_width):
+                # The text is too long, so we need to scale it down
+                myFont = ImageFont.truetype('DejaVuSans.ttf', TITLE_FONT_SIZE * (max_text_width / text_size.width))
+                text_size = _get_text_size(text_config['text'], myFont)
 
-            draw.text((IMAGE_WIDTH - text_size[0] - 10, 10), text, font=myFont, fill=(255,255,255))
+            draw.text((IMAGE_WIDTH - text_size.width - GUTTER_SIZE, GUTTER_SIZE), 
+                      text_config['text'], font=myFont, fill=(255,255,255))
 
         # Save the image
-        img.save(output_path)
+        output_img.save(output_path)
 
 def build_arg_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser()
+    parser.add_argument("--config_file", "-c", type=str, required=False, default=None)
     parser.add_argument("--image_path", type=str, required=True)
     parser.add_argument("--output_path", type=str, required=True)
     parser.add_argument("--logo", type=str, required=False, default=None)
@@ -91,15 +115,34 @@ def build_arg_parser() -> argparse.ArgumentParser:
     parser.add_argument("--text", type=str, required=False, default=None)
     return parser
 
-if __name__ == "__main__":
-    image_path = sys.argv[1]
-    output_path = sys.argv[2]
+def build_config(args : argparse.Namespace) -> Any:
+    if args.config_file is not None:
+        with open(args.config_file, "r") as f:
+            supplied_config = json.load(f)
+    else:
+        supplied_config = {}
 
-    parser = build_arg_parser()
-    args, _ = parser.parse_known_args()
+    retval = { 'image' : { 'size' : geometry(IMAGE_WIDTH, IMAGE_HEIGHT) },
+               'input' : { 'path' : args.image_path },
+              'output' : { 'path' : args.output_path },
+    }
 
+    if args.logo is not None:
+        retval['logo'] = { 'path' : args.logo, 'size' : args.logo_size }
+
+    if args.text is not None:
+        retval['text'] = {'text' : args.text}
+
+    return retval
+
+def run() :
+    args = build_arg_parser().parse_args()
     if not os.path.isfile(args.image_path):
         print(f"The image file {args.image_path} does not exist.")
         sys.exit(1)
 
-    resize_and_square(args.image_path, args.output_path, args.logo, args.logo_size, args.text)
+    config = build_config(args)
+    resize_and_square(config)
+
+if __name__ == "__main__":
+    run()
