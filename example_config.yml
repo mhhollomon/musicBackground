@@ -1,0 +1,9 @@
+# Everything can be overriden on the command line
+
+# Information about the logo image that goes in the lower right corner
+logo :
+  path : "/path/to/image/file" # --logo
+  size : 200 # --logo_size
+
+title :
+  text : "This is the title" # --text

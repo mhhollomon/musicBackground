@@ -4,7 +4,8 @@
 
 import argparse
 from dataclasses import dataclass
-import json
+import pprint
+import yaml
 from typing import Any
 
 from PIL import Image
@@ -47,22 +48,24 @@ def resize_and_square(config : Any) :
         # 1. resize the cover so that it is the same height as the output image while keeping the aspect ratio
         # 2. If necessary, crop the cover so that it is square.
         #
-        # We don't currently handle "tall" covers.
+
+        cover_side = out_image_size.height
+
 
         # Calculate the new width while keeping the aspect ratio
-        new_width = int(out_image_size.width * (original_width / original_height))
+        new_width = int(cover_side * (original_width / original_height))
 
         # Resize the image
-        cover_img = cover_img.resize((new_width, out_image_size.height))
+        cover_img = cover_img.resize((new_width, cover_side))
 
         # Find the new dimensions
-        new_width, new_height = cover_img.size
+        new_width, _ = cover_img.size
 
         # Crop the image if necessary
-        if new_width > out_image_size.height:
-            offset = (new_width - out_image_size.height) // 2
-            # Crop off the left side
-            cover_img = cover_img.crop((offset, 0, out_image_size.height + offset, new_height))
+        if new_width > cover_side:
+            offset = (new_width - cover_side) // 2
+            # Crop for the middle
+            cover_img = cover_img.crop((offset, 0, cover_side + offset, cover_side))
 
         output_img = Image.new("RGB", out_image_size.to_tuple(), (0, 0, 0))
         output_img.paste(cover_img, (0, 0))
@@ -74,13 +77,14 @@ def resize_and_square(config : Any) :
             with Image.open(logo_config['path']) as logo:
                 # Get the logo dimensions
                 logo_width, logo_height = logo.size
+                needed_size = logo_config['size']
 
-                resized_logo = logo.resize((int(logo_width * (logo_config['size'] / logo_height)), logo_config['size']))
+                resized_logo = logo.resize((int(needed_size * (logo_width / logo_height)), needed_size))
                 logo_width, logo_height = resized_logo.size
 
                 # Calculate the offset
-                width_offset = IMAGE_WIDTH - logo_width - GUTTER_SIZE
-                height_offset = IMAGE_HEIGHT - logo_height - GUTTER_SIZE
+                width_offset = out_image_size.width - logo_width - GUTTER_SIZE
+                height_offset = out_image_size.height - logo_height - GUTTER_SIZE
 
                 # Paste the logo
                 output_img.paste(resized_logo, (width_offset, height_offset))
@@ -118,9 +122,17 @@ def build_arg_parser() -> argparse.ArgumentParser:
 def build_config(args : argparse.Namespace) -> Any:
     if args.config_file is not None:
         with open(args.config_file, "r") as f:
-            supplied_config = json.load(f)
+            supplied_config = yaml.safe_load(f)
     else:
         supplied_config = {}
+
+    if 'title' in supplied_config:
+        args.text = supplied_config['title'].get('text', args.text)
+
+    if 'logo' in supplied_config:
+        l = supplied_config['logo']
+        args.logo = l.get('path', args.logo)
+        args.logo_size = l.get('size', args.logo_size) 
 
     retval = { 'image' : { 'size' : geometry(IMAGE_WIDTH, IMAGE_HEIGHT) },
                'input' : { 'path' : args.image_path },
@@ -132,6 +144,8 @@ def build_config(args : argparse.Namespace) -> Any:
 
     if args.text is not None:
         retval['text'] = {'text' : args.text}
+
+    pprint.pprint(retval)
 
     return retval
 
