@@ -1,9 +1,25 @@
-# Everything can be overriden on the command line
+# Specs for the final image
+output :
+  path : "/path/to/output/file.png" # --output_path
+  size : 1980x1080 # ---output_size
+  # This is the base color of the output image. It will be the
+  # color of any area that isn't otherwise covered by the various elements.
+  # Currently only hex color codes are supported
+  color : "#000000" # --output_color
 
 # Information about the logo image that goes in the lower right corner
 logo :
   path : "/path/to/image/file" # --logo
-  size : 200 # --logo_size
+  size : 200 # size in pixels --logo_size
 
+# Information about the title that goes in the upper right corner
 title :
-  text : "This is the title" # --text
+  text : "This is the title" # --title
+  # This size is a maximum. If the text does not fit, it will be scaled down.
+  size : 200 # size in pixels - --title_size
+  font : 'DejaVuSans.ttf' # not currently overidable
+
+cover :
+  path : "/path/to/cover/file.jpg" # --cover_path
+
+gutter : 10 # --gutter
