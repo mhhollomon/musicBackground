@@ -91,7 +91,7 @@ def _add_supplied_config(config : Any, supplied_config : Any) :
     return config
 
 def _add_args(config : Any, args : argparse.Namespace) :
-    config['output']['path'] = args.output_path
+    config['output']['path'] = nvl(args.output_path, config['output']['path'])
     config['output']['size'] = nvl(geometry.from_string(args.output_size), config['output']['size'])
     config['output']['color'] = nvl(args.output_color, config['output']['color'])
 

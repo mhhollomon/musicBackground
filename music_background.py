@@ -20,6 +20,21 @@ def _get_text_size(text : str, font : ImageFont.FreeTypeFont) -> geometry:
     size = geometry(int(box[2]-box[0]), int(box[3]-box[1]))
     return size
 
+def _build_logo(config : Any) -> Image.Image | None :
+    logo_config = config.get('logo', None)
+    if logo_config is None :
+        return None
+
+    logo_path = logo_config['path']
+
+    with Image.open(logo_path) as logo_img:
+        logo_width, logo_height = logo_img.size
+        needed_size = logo_config['size']
+
+        logo_img = logo_img.resize((int(needed_size * (logo_width / logo_height)), needed_size))
+
+        return logo_img
+
 def build_image(config : Any) :
     # Open the image
     output_path = config['output']['path']
@@ -61,27 +76,22 @@ def build_image(config : Any) :
 
         logo_config = config.get('logo', None)
 
-        if logo_config['path'] is not None:
-            # Open the logo
-            with Image.open(logo_config['path']) as logo:
-                # Get the logo dimensions
-                logo_width, logo_height = logo.size
-                needed_size = logo_config['size']
+        logo_img = _build_logo(config)
+        if logo_img is not None:
+            logo_width, logo_height = logo_img.size
 
-                resized_logo = logo.resize((int(needed_size * (logo_width / logo_height)), needed_size))
-                logo_width, logo_height = resized_logo.size
+            # Calculate the offset
+            width_offset = output_size.width - logo_width - config['gutter']
+            height_offset = output_size.height - logo_height - config['gutter']
 
-                # Calculate the offset
-                width_offset = output_size.width - logo_width - config['gutter']
-                height_offset = output_size.height - logo_height - config['gutter']
+            # Paste the logo
+            output_img.paste(logo_img, (width_offset, height_offset))
 
-                # Paste the logo
-                output_img.paste(resized_logo, (width_offset, height_offset))
 
         title_config = config.get('title', None)
         if title_config is not None and title_config['text'] is not None:
             draw = ImageDraw.Draw(output_img)
-            myFont = ImageFont.truetype('DejaVuSans.ttf', title_config['size'])
+            myFont = ImageFont.truetype(title_config['font'], title_config['size'])
             text_size = _get_text_size(title_config['text'], myFont)
 
             print(f"text_size = {text_size}")
