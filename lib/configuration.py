@@ -64,11 +64,11 @@ class geometry :
 def _build_default_config() -> Any :
     return {
         'output' : { 'path' : None, 'size' : geometry(IMAGE_WIDTH, IMAGE_HEIGHT), 'color' : '#000000' },
-        'logo'   : { 'path' : None, 'size' : LOGO_SIZE, 'mask' : 'black' },
-        'title'  : { 'text' : None, 'size' : TITLE_FONT_SIZE, 'font' : TITLE_FONT },
+        'gutter' : GUTTER_SIZE,
         'cover'  : { 'path' : None, 'align' : 'min', 'crop' : 'min', 
                     'fit' : 'square', 'color' : None },
-        'gutter' : GUTTER_SIZE,
+        'logo'   : { 'path' : None, 'size' : LOGO_SIZE, 'mask' : 'black' },
+        'title'  : { 'text' : None, 'size' : TITLE_FONT_SIZE, 'font' : TITLE_FONT },
     }
 
 def _add_supplied_config(config : Any, supplied_config : Any) :
@@ -80,6 +80,20 @@ def _add_supplied_config(config : Any, supplied_config : Any) :
             config['output']['size'] = geometry.from_string(c['size'])
         if 'color' in c :
             config['output']['color'] = c['color']
+
+    if 'gutter' in supplied_config :
+        config['gutter'] = int(supplied_config['gutter'])
+
+    if 'cover' in supplied_config :
+        c = supplied_config['cover']
+        if 'path' in c :
+            config['cover']['path'] = c['path']
+        if 'align' in c :
+            config['cover']['align'] = c['align']
+        if 'crop' in c :
+            config['cover']['crop'] = c['crop']
+        if 'fit' in c :
+            config['cover']['fit'] = c['fit']
 
     if 'logo' in supplied_config :
         c = supplied_config['logo']
@@ -99,20 +113,6 @@ def _add_supplied_config(config : Any, supplied_config : Any) :
         if 'font' in c :
             config['title']['font'] = c['font']
 
-    if 'cover' in supplied_config :
-        c = supplied_config['cover']
-        if 'path' in c :
-            config['cover']['path'] = c['path']
-        if 'align' in c :
-            config['cover']['align'] = c['align']
-        if 'crop' in c :
-            config['cover']['crop'] = c['crop']
-        if 'fit' in c :
-            config['cover']['fit'] = c['fit']
-
-
-    if 'gutter' in supplied_config :
-        config['gutter'] = int(supplied_config['gutter'])
 
     return config
 
@@ -122,6 +122,13 @@ def _add_args(config : Any, args : argparse.Namespace) :
                                    config['output']['size'])
     config['output']['color'] = nvl(args.output_color, config['output']['color'])
 
+    config['gutter'] = nvl(args.gutter, config['gutter'])
+
+    config['cover']['path'] = nvl(args.cover_path, config['cover']['path'])
+    config['cover']['align'] = nvl(args.cover_align, config['cover']['align'])
+    config['cover']['crop'] = nvl(args.cover_crop, config['cover']['crop'])
+    config['cover']['fit'] = nvl(args.cover_fit, config['cover']['fit'])
+
     config['logo']['path'] = nvl(args.logo, config['logo']['path'])
     config['logo']['size'] = nvl(args.logo_size, config['logo']['size'])
     config['logo']['mask'] = nvl(args.logo_mask, config['logo']['mask'])
@@ -129,13 +136,6 @@ def _add_args(config : Any, args : argparse.Namespace) :
     config['title']['text'] = nvl(args.title, config['title']['text'])
     config['title']['size'] = nvl(args.title_size, config['title']['size'])
     config['title']['font'] = nvl(args.title_font, config['title']['font'])
-
-    config['cover']['path'] = nvl(args.cover_path, config['cover']['path'])
-    config['cover']['align'] = nvl(args.cover_align, config['cover']['align'])
-    config['cover']['crop'] = nvl(args.cover_crop, config['cover']['crop'])
-    config['cover']['fit'] = nvl(args.cover_fit, config['cover']['fit'])
-
-    config['gutter'] = nvl(args.gutter, config['gutter'])
 
     return config
 

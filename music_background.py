@@ -357,7 +357,8 @@ def build_arg_parser() -> argparse.ArgumentParser:
                         help="The font to use for the title text. If not specified, the default font will be used.")
 
     parser.add_argument("--gutter", type=int, required=False, default=None,
-                        help="The size of the gutter between the cover image and the title. If not specified, the gutter will be 10 pixels.")
+                        help="The size of the gutter between the edge of the output image and the title."
+                        " If not specified, the gutter will be 10 pixels.")
     return parser
 
 
