@@ -71,6 +71,8 @@ class position :
             return None
 
         w, h = s.split('-')
+        w = w.strip().lower()
+        h = h.strip().lower()
         if w not in ('left', 'center', 'right') or h not in ('top', 'center', 'bottom') :
             raise ValueError(f"Invalid position string: {s}")
         
@@ -85,7 +87,10 @@ def _build_default_config() -> Any :
         'logo'   : { 'path' : None, 'size' : LOGO_SIZE, 'mask' : 'black', 
                     'position' : 'right-bottom' },
         'title'  : { 'text' : None, 'size' : TITLE_FONT_SIZE, 
-                    'font' : TITLE_FONT, 'position' : 'right-top' },
+                    'font' : TITLE_FONT, 'position' : 'right-top',
+                    'fill' : '#ffffff',
+                    'stroke' : { 'color' : '#ffffff', 'width' : 0 }
+                },
     }
 
 def _add_supplied_config(config : Any, supplied_config : Any) :
@@ -133,6 +138,14 @@ def _add_supplied_config(config : Any, supplied_config : Any) :
             config['title']['font'] = c['font']
         if 'position' in c :
             config['title']['position'] = c['position']
+        if 'fill' in c :
+            config['title']['fill'] = c['fill']
+        if 'stroke' in c :
+            c = c['stroke']
+            if 'color' in c :
+                config['title']['stroke']['color'] = c['color']
+            if 'width' in c :
+                config['title']['stroke']['width'] = int(c['width'])
 
 
     return config
@@ -161,6 +174,11 @@ def _add_args(config : Any, args : argparse.Namespace) :
     config['title']['font'] = nvl(args.title_font, config['title']['font'])
     config['title']['position'] = position.from_string(
         nvl(args.title_position, config['title']['position']))
+    config['title']['fill'] = nvl(args.title_fill, config['title']['fill'])
+    config['title']['stroke']['color'] = nvl(args.title_stroke_color,
+                                            config['title']['stroke']['color'])
+    config['title']['stroke']['width'] = nvl(args.title_stroke_width,
+                                            config['title']['stroke']['width'])
 
     return config
 
@@ -215,6 +233,11 @@ def validate_config(config : Any) -> bool :
     if config['logo']['path'] is not None:
         if not os.path.isfile(config['logo']['path']):
             print(f"The logo image file {config['logo']['path']} does not exist.")
+            return False
+
+    if config['title']['text'] is not None:
+        if config['title']['stroke']['width'] < 0:
+            print("Title stroke width must be >= 0")
             return False
 
     return True

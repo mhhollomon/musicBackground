@@ -328,21 +328,30 @@ def _add_title(config : Any, output_img : Image.Image) -> None :
     output_size = config['output']['size']
 
     draw = ImageDraw.Draw(output_img)
-    myFont = ImageFont.truetype(title_cfg['font'], title_cfg['size'])
-    text_size = _get_text_size(title_cfg['text'], myFont)
+    title_font = ImageFont.truetype(title_cfg['font'], title_cfg['size'])
+    text_size = _get_text_size(title_cfg['text'], title_font)
 
     print(f"text_size = {text_size}")
 
     max_text_width = output_size.width - output_size.height - (config['gutter'] * 2)
     if (text_size.width > max_text_width):
         # The text is too long, so we need to scale it down
-        myFont = ImageFont.truetype('DejaVuSans.ttf', title_cfg['size'] * (max_text_width / text_size.width))
-        text_size = _get_text_size(title_cfg['text'], myFont)
+        title_font = ImageFont.truetype('DejaVuSans.ttf', title_cfg['size'] * (max_text_width / text_size.width))
+        text_size = _get_text_size(title_cfg['text'], title_font)
 
     offsets = _position_to_offset(title_cfg['position'], output_size, text_size, config['gutter'])
 
-    draw.text(offsets, title_cfg['text'], font=myFont, fill=(255,255,255))
+    if title_cfg['stroke']['width'] > 0:
+        stroke_params = { 'stroke_fill' : title_cfg['stroke']['color'],
+                          'stroke_width' : title_cfg['stroke']['width'] }
+    else :
+        stroke_params = {}
 
+    draw.text(offsets, title_cfg['text'], font=title_font, fill=title_cfg['fill'], **stroke_params)
+
+#--------------------------------------------------------------------------------
+# TOP LEVEL FUNCTION
+#--------------------------------------------------------------------------------
 
 def build_image(config : Any) :
     # Open the image
@@ -371,7 +380,7 @@ def build_arg_parser() -> argparse.ArgumentParser:
     parser.add_argument("--output_size", type=str, required=False, default=None,
                         help="The size of the output image. Must be in the format 'WIDTHxHEIGHT'.")
     parser.add_argument("--output_color", type=str, required=False, default=None,
-                        help="The background color of the output image. Must be in the format '#RRGGBB'.")
+                        help="The background color of the output image.")
 
     parser.add_argument("--cover_path", type=str, required=False, default=None,
                         help="The path to the cover image.")
@@ -403,6 +412,12 @@ def build_arg_parser() -> argparse.ArgumentParser:
                         help="The font to use for the title text. If not specified, the default font will be used.")
     parser.add_argument("--title_position", type=str, required=False, default=None,
                         help="The position of the title on the output image. Must be in the format 'WIDTH-HEIGHT'.")
+    parser.add_argument("--title_fill", type=str, required=False, default=None,
+                        help="The fill color for the title text.")
+    parser.add_argument("--title_stroke_color", type=str, required=False, default=None,
+                        help="The stroke color for the title text.")
+    parser.add_argument("--title_stroke_width", type=int, required=False, default=None,
+                        help="The stroke width for the title text.")
 
     parser.add_argument("--gutter", type=int, required=False, default=None,
                         help="The size of the gutter between the edge of the output image and the title."
