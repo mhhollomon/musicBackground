@@ -60,6 +60,21 @@ class geometry :
     def is_landscape(self) -> bool :
         return self.width > self.height
 
+@dataclass
+class position :
+    w : str
+    h : str
+
+    @classmethod
+    def from_string(cls, s : str | None) -> 'position | None' :
+        if s is None :
+            return None
+
+        w, h = s.split('-')
+        if w not in ('left', 'center', 'right') or h not in ('top', 'center', 'bottom') :
+            raise ValueError(f"Invalid position string: {s}")
+        
+        return cls(w, h)
 
 def _build_default_config() -> Any :
     return {
@@ -67,7 +82,8 @@ def _build_default_config() -> Any :
         'gutter' : GUTTER_SIZE,
         'cover'  : { 'path' : None, 'align' : 'min', 'crop' : 'min', 
                     'fit' : 'square', 'color' : None },
-        'logo'   : { 'path' : None, 'size' : LOGO_SIZE, 'mask' : 'black' },
+        'logo'   : { 'path' : None, 'size' : LOGO_SIZE, 'mask' : 'black', 
+                    'position' : 'right-bottom' },
         'title'  : { 'text' : None, 'size' : TITLE_FONT_SIZE, 'font' : TITLE_FONT },
     }
 
@@ -103,6 +119,8 @@ def _add_supplied_config(config : Any, supplied_config : Any) :
             config['logo']['size'] = int(c['size'])
         if 'mask' in c :
             config['logo']['mask'] = c['mask']
+        if 'position' in c :
+            config['logo']['position'] = c['position']
 
     if 'title' in supplied_config :
         c = supplied_config['title']
@@ -132,6 +150,8 @@ def _add_args(config : Any, args : argparse.Namespace) :
     config['logo']['path'] = nvl(args.logo, config['logo']['path'])
     config['logo']['size'] = nvl(args.logo_size, config['logo']['size'])
     config['logo']['mask'] = nvl(args.logo_mask, config['logo']['mask'])
+    config['logo']['position'] = position.from_string(
+        nvl(args.logo_position, config['logo']['position']))
     
     config['title']['text'] = nvl(args.title, config['title']['text'])
     config['title']['size'] = nvl(args.title_size, config['title']['size'])

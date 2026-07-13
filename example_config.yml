@@ -30,7 +30,9 @@ gutter : 10 # --gutter
 
 # Information about the cover image
 cover :
-  path : "/path/to/cover/file.jpg" # --cover_path
+  # The path to the cover image.
+  # The image can be any type supported by the `pillow` module.
+  path : "/path/to/cover/file.png" # --cover_path
 
   # How the cover is resized to fit on the background.
   # 'square' will resize the cover, then crop to a square.
@@ -59,6 +61,8 @@ cover :
 
 # Information about the logo image
 logo :
+  # The path to the logo image
+  # The image can be any type supported by the `pillow` module.
   path : "/path/to/image/file.jpg" # --logo
 
   # size in pixels for the logo. aspect ratio will be preserved.
@@ -73,6 +77,14 @@ logo :
   # are transparent. 'black' is the default.
   # 'none' : No masking is done.
   mask : black # --logo_mask
+
+  # Position for the logo on the output.
+  # In the format Width-Height
+  # Width is one of 'left', 'center', 'right'
+  # Height is one of 'top', 'center', 'bottom'
+  # The logo will be placed using the `gutter` parameter as a standoff
+  # from the edge of the output image.
+  position : right-bottom # --logo_position
 
 # Information about the title text.
 title :

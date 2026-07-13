@@ -61,10 +61,23 @@ def _add_logo(config : Any, output_img : Image.Image) -> None :
     if logo_img is not None:
         logo_img, mask_img = logo_img
         logo_width, logo_height = logo_img.size
+        output_size = config['output']['size']
+        position = config['logo']['position']
 
         # Calculate the offset
-        width_offset = config['output']['size'].width - logo_width - config['gutter']
-        height_offset = config['output']['size'].height - logo_height - config['gutter']
+        if position.w == 'left':
+            width_offset = config['gutter']
+        elif position.w == 'center':
+            width_offset = (output_size.width - logo_width) // 2
+        elif position.w == 'right':
+            width_offset = output_size.width - logo_width - config['gutter']
+
+        if position.h == 'top':
+            height_offset = config['gutter']
+        elif position.h == 'center':
+            height_offset = (output_size.height - logo_height) // 2
+        elif position.h == 'bottom':
+            height_offset = output_size.height - logo_height - config['gutter']
 
         # Paste the logo
         if mask_img is not None:
@@ -76,7 +89,15 @@ def _add_logo(config : Any, output_img : Image.Image) -> None :
 # COVER
 #--------------------------------------------------------------------------------
 
-def _landscape_cover_square(cover_img : Image.Image, cover_side : int, crop : str, bg_color : Tuple[int, int, int]) -> Image.Image :
+def _landscape_cover_square(config : Any) -> Image.Image :
+    cover_cfg = config['cover']
+
+    required_size = config['output']['size']
+    cover_side = required_size.height
+    crop = cover_cfg['crop']
+    bg_color = cover_cfg['color']
+
+    cover_img = Image.open(cover_cfg['path'])
     original_width, original_height = cover_img.size
     aspect_ratio = original_width / original_height
 
@@ -114,7 +135,17 @@ def _landscape_cover_square(cover_img : Image.Image, cover_side : int, crop : st
 
     return cover_img
 
-def _portrait_cover_square(cover_img : Image.Image, cover_side : int, crop : str, bg_color : Tuple[int, int, int]) -> Image.Image :
+def _portrait_cover_square(config :Any) -> Image.Image :
+    cover_cfg = config['cover']
+
+    required_size = config['output']['size']
+    cover_side = required_size.width
+    crop = cover_cfg['crop']
+    bg_color = cover_cfg['color']
+
+    cover_img = Image.open(cover_cfg['path'])
+
+
     original_width, original_height = cover_img.size
     aspect_ratio = original_height / original_width
 
@@ -248,42 +279,67 @@ def _add_cover(config : Any, output_img : Image.Image) -> None :
 
     cover_cfg = config['cover']
 
-    with Image.open(cover_cfg['path']) as cover_img:
+    output_size = config['output']['size']
 
-        output_size = config['output']['size']
+    if output_size.is_landscape():
+        if cover_cfg['fit'] == 'cover':
+            cover_img = _landscape_cover_fit(config)
+        else :
+            cover_img = _landscape_cover_square(config)
+    else:
+        if cover_cfg['fit'] == 'cover':
+            cover_img = _portrait_cover_fit(config)
+        else :
+            cover_img = _portrait_cover_square(config)
 
+    if config['cover']['align'] == 'min':
+        position = (0,0)
+    elif config['cover']['align'] == 'mid':
         if output_size.is_landscape():
-            if cover_cfg['fit'] == 'cover':
-                cover_img = _landscape_cover_fit(config)
-            else :
-                cover_img = _landscape_cover_square(cover_img, output_size.height, 
-                                                cover_cfg['crop'], 
-                                                config['output']['color'])
+            position = ((output_size.width - cover_img.width) // 2, 0)
         else:
-            if cover_cfg['fit'] == 'cover':
-                cover_img = _portrait_cover_fit(config)
-            else :
-                cover_img = _portrait_cover_square(cover_img, output_size.width, 
-                                               cover_cfg['crop'], 
-                                               config['output']['color'])
-
-        if config['cover']['align'] == 'min':
-            position = (0,0)
-        elif config['cover']['align'] == 'mid':
-            if output_size.is_landscape():
-                position = ((output_size.width - cover_img.width) // 2, 0)
-            else:
-                position = (0, (output_size.height - cover_img.height) // 2)
-        elif config['cover']['align'] == 'max':
-            if output_size.is_landscape():
-                position = (output_size.width - cover_img.width, 0)
-            else:
-                position = (0, output_size.height - cover_img.height)
+            position = (0, (output_size.height - cover_img.height) // 2)
+    elif config['cover']['align'] == 'max':
+        if output_size.is_landscape():
+            position = (output_size.width - cover_img.width, 0)
         else:
-            raise Exception(f"Invalid cover alignment: {config['cover']['align']}")
+            position = (0, output_size.height - cover_img.height)
+    else:
+        raise Exception(f"Invalid cover alignment: {config['cover']['align']}")
 
-        # Paste the cover
-        output_img.paste(cover_img, position)
+    # Paste the cover
+    output_img.paste(cover_img, position)
+
+#--------------------------------------------------------------------------------
+# TITLE
+#--------------------------------------------------------------------------------
+
+def _add_title(config : Any, output_img : Image.Image) -> None :
+    title_cfg = config['title']
+
+    if title_cfg is None or title_cfg['text'] is None:
+        return
+
+    output_size = config['output']['size']
+
+    draw = ImageDraw.Draw(output_img)
+    myFont = ImageFont.truetype(title_cfg['font'], title_cfg['size'])
+    text_size = _get_text_size(title_cfg['text'], myFont)
+
+    print(f"text_size = {text_size}")
+
+    max_text_width = output_size.width - output_size.height - (config['gutter'] * 2)
+    if (text_size.width > max_text_width):
+        # The text is too long, so we need to scale it down
+        myFont = ImageFont.truetype('DejaVuSans.ttf', title_cfg['size'] * (max_text_width / text_size.width))
+        text_size = _get_text_size(title_cfg['text'], myFont)
+
+    draw.text((output_size.width - text_size.width - config['gutter'], config['gutter']), 
+                title_cfg['text'], font=myFont, fill=(255,255,255))
+
+    # Add a shadow
+    #draw.text((output_size.width - text_size.width - config['gutter'] + 2, config['gutter'] + 2), 
+    #            title_cfg['text'], font=myFont, fill=(0,0,0))
 
 def build_image(config : Any) :
     # Open the image
@@ -296,22 +352,7 @@ def build_image(config : Any) :
 
     _add_logo(config, output_img)
 
-    title_config = config.get('title', None)
-    if title_config is not None and title_config['text'] is not None:
-        draw = ImageDraw.Draw(output_img)
-        myFont = ImageFont.truetype(title_config['font'], title_config['size'])
-        text_size = _get_text_size(title_config['text'], myFont)
-
-        print(f"text_size = {text_size}")
-
-        max_text_width = output_size.width - output_size.height - (config['gutter'] * 2)
-        if (text_size.width > max_text_width):
-            # The text is too long, so we need to scale it down
-            myFont = ImageFont.truetype('DejaVuSans.ttf', title_config['size'] * (max_text_width / text_size.width))
-            text_size = _get_text_size(title_config['text'], myFont)
-
-        draw.text((output_size.width - text_size.width - config['gutter'], config['gutter']), 
-                    title_config['text'], font=myFont, fill=(255,255,255))
+    _add_title(config, output_img)
 
     # Save the image
     output_img.save(output_path)
@@ -348,6 +389,8 @@ def build_arg_parser() -> argparse.ArgumentParser:
     parser.add_argument("--logo_mask", type=str, required=False, default=None,
                         choices=['self', 'black'], 
                         help="The mask algorithm to use for the logo image. Default is 'black'.")
+    parser.add_argument("--logo_position", type=str, required=False, default=None,
+                        help="The position of the logo on the output image. Must be in the format 'WIDTH-HEIGHT'.")
 
     parser.add_argument("--title", type=str, required=False, default=None,
                         help="The text to display in the title. If not specified, no title will be added.")
