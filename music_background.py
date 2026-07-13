@@ -20,7 +20,11 @@ def _get_text_size(text : str, font : ImageFont.FreeTypeFont) -> geometry:
     size = geometry(int(box[2]-box[0]), int(box[3]-box[1]))
     return size
 
-def _build_logo(config : Any) -> Tuple[Image.Image, Image.Image] | None :
+#--------------------------------------------------------------------------------
+# LOGO
+#--------------------------------------------------------------------------------
+
+def _build_logo(config : Any) -> Tuple[Image.Image, Image.Image | None] | None :
     logo_config = config.get('logo', None)
     if logo_config is None :
         return None
@@ -47,6 +51,8 @@ def _build_logo(config : Any) -> Tuple[Image.Image, Image.Image] | None :
             pass
         elif logo_config['mask'] == 'black':
             gray_img = gray_img.point(lambda x : 0 if x < 10 else 255) # type: ignore
+        else :
+            gray_img = None
 
         return (logo_img, gray_img)
     
@@ -61,9 +67,16 @@ def _add_logo(config : Any, output_img : Image.Image) -> None :
         height_offset = config['output']['size'].height - logo_height - config['gutter']
 
         # Paste the logo
-        output_img.paste(logo_img, (width_offset, height_offset), mask=mask_img)
+        if mask_img is not None:
+            output_img.paste(logo_img, (width_offset, height_offset), mask=mask_img)
+        else:
+            output_img.paste(logo_img, (width_offset, height_offset))
 
-def _landscape_cover_square(cover_img : Image.Image, cover_side : int) -> Image.Image :
+#--------------------------------------------------------------------------------
+# COVER
+#--------------------------------------------------------------------------------
+
+def _landscape_cover_square(cover_img : Image.Image, cover_side : int, crop : str, bg_color : Tuple[int, int, int]) -> Image.Image :
     original_width, original_height = cover_img.size
     aspect_ratio = original_width / original_height
 
@@ -73,44 +86,89 @@ def _landscape_cover_square(cover_img : Image.Image, cover_side : int) -> Image.
     # Resize the image
     cover_img = cover_img.resize((new_dimension, cover_side))
 
-
     # Crop the image if necessary
     if new_dimension > cover_side:
-        offset = (new_dimension - cover_side) // 2
-        # Crop for the middle
-        cover_img = cover_img.crop((offset, 0, cover_side + offset, cover_side))
+        if crop == 'min':
+            box = (0, 0, cover_side, cover_side)
+        if crop == 'mid':
+            offset = (new_dimension - cover_side) // 2
+            box = (offset, 0, cover_side + offset, cover_side)
+        elif crop == 'max':
+            offset = (new_dimension - cover_side)
+            box = (offset, 0, cover_side + offset, cover_side)
+        cover_img = cover_img.crop(box)
+
+    elif new_dimension < cover_side:
+        box_img = Image.new("RGB", (cover_side, cover_side), bg_color)
+        if crop == 'min':
+            origin = (0, 0)
+        if crop == 'mid':
+            offset = (cover_side - new_dimension) // 2
+            origin = (offset, 0)
+        elif crop == 'max':
+            offset = (cover_side - new_dimension)
+            origin = (offset, 0)
+        box_img.paste(box_img, origin)
+        cover_img = box_img
+
 
     return cover_img
 
-def _portrait_cover_square(cover_img : Image.Image, cover_side : int) -> Image.Image :
+def _portrait_cover_square(cover_img : Image.Image, cover_side : int, crop : str, bg_color : Tuple[int, int, int]) -> Image.Image :
     original_width, original_height = cover_img.size
     aspect_ratio = original_height / original_width
 
     # Calculate the new width while keeping the aspect ratio
-    new_dimension = int(cover_side * aspect_ratio)
+    new_height = int(cover_side * aspect_ratio)
 
     # Resize the image
-    cover_img = cover_img.resize((cover_side, new_dimension))
+    cover_img = cover_img.resize((cover_side, new_height))
 
     # Crop the image if necessary
-    if new_dimension > cover_side:
-        offset = (new_dimension - cover_side) // 2
+    if new_height > cover_side:
+        if crop == 'min':
+            box = (0, 0, cover_side, cover_side)
         # Crop for the middle
-        cover_img = cover_img.crop((0, offset, cover_side, cover_side + offset))
+        elif crop == 'mid':
+            offset = (new_height - cover_side) // 2
+            box = (0, offset, cover_side, cover_side + offset)
+        elif crop == 'max':
+            offset = (new_height - cover_side)
+            box = (0, offset, cover_side, cover_side + offset)
+
+        cover_img = cover_img.crop(box)
+
+    elif new_height < cover_side:
+        box_img = Image.new("RGB", (cover_side, cover_side), bg_color)
+        if crop == 'min':
+            origin = (0, 0)
+        if crop == 'mid':
+            offset = (cover_side - new_height) // 2
+            origin = (0, offset)
+        elif crop == 'max':
+            offset = (cover_side - new_height)
+            origin = (0, offset)
+        box_img.paste(box_img, origin)
+        cover_img = box_img
 
     return cover_img
 
 def _add_cover(config : Any, output_img : Image.Image) -> None :
 
-    with Image.open(config['cover']['path']) as cover_img:
+    cover_cfg = config['cover']
+
+    with Image.open(cover_cfg['path']) as cover_img:
 
         output_size = config['output']['size']
-        # Get the original dimensions
 
         if output_size.is_landscape():
-            cover_img = _landscape_cover_square(cover_img, output_size.height)
+            cover_img = _landscape_cover_square(cover_img, output_size.height, 
+                                                cover_cfg['crop'], 
+                                                config['output']['color'])
         else:
-            cover_img = _portrait_cover_square(cover_img, output_size.width)
+            cover_img = _portrait_cover_square(cover_img, output_size.width, 
+                                               cover_cfg['crop'], 
+                                               config['output']['color'])
 
         if config['cover']['position'] == 'min':
             position = (0,0)
@@ -138,7 +196,6 @@ def build_image(config : Any) :
     output_img = Image.new("RGB", output_size.to_tuple(), color=config['output']['color'])
 
     _add_cover(config, output_img)
-
 
     _add_logo(config, output_img)
 
@@ -175,11 +232,14 @@ def build_arg_parser() -> argparse.ArgumentParser:
     parser.add_argument("--output_color", type=str, required=False, default=None,
                         help="The background color of the output image. Must be in the format '#RRGGBB'.")
 
-    parser.add_argument("--cover_path", type=str, required=True,
+    parser.add_argument("--cover_path", type=str, required=False, default=None,
                         help="The path to the cover image.")
     parser.add_argument("--cover_position", type=str, required=False, default=None,
                         choices=['min', 'mid', 'max'], 
                         help="The position of the cover image. Default is 'min'")
+    parser.add_argument("--cover_crop", type=str, required=False, default=None,
+                        choices=['min', 'mid', 'max'], 
+                        help="The crop of the cover image. Default is 'min'")
 
     parser.add_argument("--logo", type=str, required=False, default=None,
                         help="The path to the logo image. If not specified, no logo will be added.")
@@ -203,10 +263,6 @@ def build_arg_parser() -> argparse.ArgumentParser:
 
 def run() :
     args = build_arg_parser().parse_args()
-    if not os.path.isfile(args.cover_path):
-        print(f"The image file {args.cover_path} does not exist.")
-        sys.exit(1)
-
     config = build_config(args)
     if not validate_config(config):
         sys.exit(1)

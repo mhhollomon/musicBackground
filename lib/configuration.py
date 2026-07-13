@@ -66,7 +66,7 @@ def _build_default_config() -> Any :
         'output' : { 'path' : None, 'size' : geometry(IMAGE_WIDTH, IMAGE_HEIGHT), 'color' : '#000000' },
         'logo'   : { 'path' : None, 'size' : LOGO_SIZE, 'mask' : 'black' },
         'title'  : { 'text' : None, 'size' : TITLE_FONT_SIZE, 'font' : TITLE_FONT },
-        'cover'  : { 'path' : None, 'position' : 'min' },
+        'cover'  : { 'path' : None, 'position' : 'min', 'crop' : 'min' },
         'gutter' : GUTTER_SIZE,
     }
 
@@ -104,6 +104,8 @@ def _add_supplied_config(config : Any, supplied_config : Any) :
             config['cover']['path'] = c['path']
         if 'position' in c :
             config['cover']['position'] = c['position']
+        if 'crop' in c :
+            config['cover']['crop'] = c['crop']
 
     if 'gutter' in supplied_config :
         config['gutter'] = int(supplied_config['gutter'])
@@ -126,6 +128,7 @@ def _add_args(config : Any, args : argparse.Namespace) :
 
     config['cover']['path'] = nvl(args.cover_path, config['cover']['path'])
     config['cover']['position'] = nvl(args.cover_position, config['cover']['position'])
+    config['cover']['crop'] = nvl(args.cover_crop, config['cover']['crop'])
 
     config['gutter'] = nvl(args.gutter, config['gutter'])
 
