@@ -97,3 +97,12 @@ title :
   # Font to use for the title.
   font : 'DejaVuSans.ttf' # --title_font
 
+  # Position for the title on the output.
+  # In the format Width-Height
+  # Width is one of 'left', 'center', 'right'
+  # Height is one of 'top', 'center', 'bottom'
+  # The title will be placed using the `gutter` parameter as a standoff
+  # from the edge of the output image.
+  position : right-top # --title_position
+
+

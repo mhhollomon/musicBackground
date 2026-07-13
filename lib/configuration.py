@@ -84,7 +84,8 @@ def _build_default_config() -> Any :
                     'fit' : 'square', 'color' : None },
         'logo'   : { 'path' : None, 'size' : LOGO_SIZE, 'mask' : 'black', 
                     'position' : 'right-bottom' },
-        'title'  : { 'text' : None, 'size' : TITLE_FONT_SIZE, 'font' : TITLE_FONT },
+        'title'  : { 'text' : None, 'size' : TITLE_FONT_SIZE, 
+                    'font' : TITLE_FONT, 'position' : 'right-top' },
     }
 
 def _add_supplied_config(config : Any, supplied_config : Any) :
@@ -130,6 +131,8 @@ def _add_supplied_config(config : Any, supplied_config : Any) :
             config['title']['size'] = int(c['size'])
         if 'font' in c :
             config['title']['font'] = c['font']
+        if 'position' in c :
+            config['title']['position'] = c['position']
 
 
     return config
@@ -156,6 +159,8 @@ def _add_args(config : Any, args : argparse.Namespace) :
     config['title']['text'] = nvl(args.title, config['title']['text'])
     config['title']['size'] = nvl(args.title_size, config['title']['size'])
     config['title']['font'] = nvl(args.title_font, config['title']['font'])
+    config['title']['position'] = position.from_string(
+        nvl(args.title_position, config['title']['position']))
 
     return config
 

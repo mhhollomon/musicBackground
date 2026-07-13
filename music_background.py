@@ -10,7 +10,7 @@ from PIL import ImageFont
 import sys
 import os
 
-from lib.configuration import build_config, geometry, validate_config
+from lib.configuration import build_config, geometry, validate_config, position
 
 
 def _get_text_size(text : str, font : ImageFont.FreeTypeFont) -> geometry:
@@ -19,6 +19,24 @@ def _get_text_size(text : str, font : ImageFont.FreeTypeFont) -> geometry:
     box = draw.multiline_textbbox((0,0), text=text, font=font)
     size = geometry(int(box[2]-box[0]), int(box[3]-box[1]))
     return size
+
+def _position_to_offset(pos : position, img_size : geometry, elem_size : geometry, gutter : int) -> Tuple[int, int] :
+    # Calculate the offset
+    if pos.w == 'left':
+        width_offset = gutter
+    elif pos.w == 'center':
+        width_offset = (img_size.width - elem_size.width) // 2
+    elif pos.w == 'right':
+        width_offset = img_size.width - elem_size.width - gutter
+
+    if pos.h == 'top':
+        height_offset = gutter
+    elif pos.h == 'center':
+        height_offset = (img_size.height - elem_size.height) // 2
+    elif pos.h == 'bottom':
+        height_offset = img_size.height - elem_size.height - gutter
+
+    return (width_offset, height_offset)
 
 #--------------------------------------------------------------------------------
 # LOGO
@@ -64,26 +82,13 @@ def _add_logo(config : Any, output_img : Image.Image) -> None :
         output_size = config['output']['size']
         position = config['logo']['position']
 
-        # Calculate the offset
-        if position.w == 'left':
-            width_offset = config['gutter']
-        elif position.w == 'center':
-            width_offset = (output_size.width - logo_width) // 2
-        elif position.w == 'right':
-            width_offset = output_size.width - logo_width - config['gutter']
-
-        if position.h == 'top':
-            height_offset = config['gutter']
-        elif position.h == 'center':
-            height_offset = (output_size.height - logo_height) // 2
-        elif position.h == 'bottom':
-            height_offset = output_size.height - logo_height - config['gutter']
+        offsets = _position_to_offset(position, output_size, geometry(logo_width, logo_height), config['gutter'])
 
         # Paste the logo
         if mask_img is not None:
-            output_img.paste(logo_img, (width_offset, height_offset), mask=mask_img)
+            output_img.paste(logo_img, offsets, mask=mask_img)
         else:
-            output_img.paste(logo_img, (width_offset, height_offset))
+            output_img.paste(logo_img, offsets)
 
 #--------------------------------------------------------------------------------
 # COVER
@@ -334,12 +339,10 @@ def _add_title(config : Any, output_img : Image.Image) -> None :
         myFont = ImageFont.truetype('DejaVuSans.ttf', title_cfg['size'] * (max_text_width / text_size.width))
         text_size = _get_text_size(title_cfg['text'], myFont)
 
-    draw.text((output_size.width - text_size.width - config['gutter'], config['gutter']), 
-                title_cfg['text'], font=myFont, fill=(255,255,255))
+    offsets = _position_to_offset(title_cfg['position'], output_size, text_size, config['gutter'])
 
-    # Add a shadow
-    #draw.text((output_size.width - text_size.width - config['gutter'] + 2, config['gutter'] + 2), 
-    #            title_cfg['text'], font=myFont, fill=(0,0,0))
+    draw.text(offsets, title_cfg['text'], font=myFont, fill=(255,255,255))
+
 
 def build_image(config : Any) :
     # Open the image
@@ -398,6 +401,8 @@ def build_arg_parser() -> argparse.ArgumentParser:
                         help="The size of the title text. If not specified, the title will be scaled to 200 pixels.")
     parser.add_argument("--title_font", type=str, required=False, default=None,
                         help="The font to use for the title text. If not specified, the default font will be used.")
+    parser.add_argument("--title_position", type=str, required=False, default=None,
+                        help="The position of the title on the output image. Must be in the format 'WIDTH-HEIGHT'.")
 
     parser.add_argument("--gutter", type=int, required=False, default=None,
                         help="The size of the gutter between the edge of the output image and the title."
