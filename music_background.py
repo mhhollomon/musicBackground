@@ -319,10 +319,10 @@ def build_image(config : Any) :
 def build_arg_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser()
     parser.add_argument("--config_file", "-c", type=str, required=False, default=None,
-                        help="yaml file containing the configuration values. Most can then be overridden on the command line.")
+                        help="yaml file containing configuration values. Most can then be overridden on the command line.")
 
     parser.add_argument("--output_path", type=str, required=False, default=None,
-                        help="The path and filename ton to which to write the output." 
+                        help="The path and filename on to which to write the output." 
                         " The extension given on the filename will be used to determine the format.")
     parser.add_argument("--output_size", type=str, required=False, default=None,
                         help="The size of the output image. Must be in the format 'WIDTHxHEIGHT'.")

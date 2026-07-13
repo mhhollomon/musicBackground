@@ -1,3 +1,14 @@
+# The configuration file is designed to allow you
+# to set defaults to use for a group of images.
+# So, for instance an album will use the same cover image and logo,
+# but different titles and output files.
+
+# The image is built in the following order
+# 1.The background
+# 2. The cover image
+# 3. The logo
+# 4. The title text
+
 # Specs for the final image
 output :
   # Only PNG and JPG (or JPEG) outputs are currently supported.
@@ -9,38 +20,15 @@ output :
 
   # This is the base color of the output image. It will be the
   # color of any area that isn't otherwise covered by the various elements.
-  # Currently only hex color codes, 'black' and 'white' are supported.
+  # Currently only hex color codes, 'black', and 'white' are supported.
   # 'black' is the default.
   color : "#000000" # --output_color
 
-# Information about the logo image that goes in the lower right corner
-logo :
-  path : "/path/to/image/file.jpg" # --logo
 
-  # size in pixels for the logo. aspect ratio will be preserved.
-  # The largest dimension of the logo will be scaled to this size.
-  size : 200 # size in pixels --logo_size
+# Gap between the title or logo and the edge of the output image
+gutter : 10 # --gutter
 
-  # Algorithm to compute a mask for the logo image.
-  # "self" uses the luminance channel of the image as-is. This means that
-  # the background will show through at least a little on any part of
-  # the logo image that is not fully white.
-  # "black" clamps the luminance channel, so that only black pixels in the logo 
-  # are transparent. 'black' is the default.
-  # 'none' : No masking is done.
-  mask : black # --logo_mask
-
-# Information about the title text.
-title :
-  text : "This is the title" # --title
-
-  # Size of the text in pixels (not points)
-  # This size is a maximum. If the text does not fit, it will be scaled down.
-  size : 200 # --title_size
-
-  # Font to use for the title.
-  font : 'DejaVuSans.ttf' # --title_font
-
+# Information about the cover image
 cover :
   path : "/path/to/cover/file.jpg" # --cover_path
 
@@ -69,4 +57,31 @@ cover :
   # as a cover in a landscape formatted output.
   crop : mid # --cover_crop
 
-gutter : 10 # --gutter
+# Information about the logo image
+logo :
+  path : "/path/to/image/file.jpg" # --logo
+
+  # size in pixels for the logo. aspect ratio will be preserved.
+  # The largest dimension of the logo will be scaled to this size.
+  size : 200 # size in pixels --logo_size
+
+  # Algorithm to compute a mask for the logo image.
+  # "self" uses the luminance channel of the image as-is. This means that
+  # the background will show through at least a little on any part of
+  # the logo image that is not fully white.
+  # "black" clamps the luminance channel, so that only black pixels in the logo 
+  # are transparent. 'black' is the default.
+  # 'none' : No masking is done.
+  mask : black # --logo_mask
+
+# Information about the title text.
+title :
+  text : "This is the title" # --title
+
+  # Size of the text in pixels (not points)
+  # This size is a maximum. If the text does not fit, it will be scaled down.
+  size : 200 # --title_size
+
+  # Font to use for the title.
+  font : 'DejaVuSans.ttf' # --title_font
+
