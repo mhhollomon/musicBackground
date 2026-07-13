@@ -170,20 +170,20 @@ def _add_cover(config : Any, output_img : Image.Image) -> None :
                                                cover_cfg['crop'], 
                                                config['output']['color'])
 
-        if config['cover']['position'] == 'min':
+        if config['cover']['align'] == 'min':
             position = (0,0)
-        elif config['cover']['position'] == 'mid':
+        elif config['cover']['align'] == 'mid':
             if output_size.is_landscape():
                 position = ((output_size.width - cover_img.width) // 2, 0)
             else:
                 position = (0, (output_size.height - cover_img.height) // 2)
-        elif config['cover']['position'] == 'max':
+        elif config['cover']['align'] == 'max':
             if output_size.is_landscape():
                 position = (output_size.width - cover_img.width, 0)
             else:
                 position = (0, output_size.height - cover_img.height)
         else:
-            raise Exception(f"Invalid cover position: {config['cover']['position']}")
+            raise Exception(f"Invalid cover alignment: {config['cover']['align']}")
 
         # Paste the cover
         output_img.paste(cover_img, position)
@@ -234,9 +234,9 @@ def build_arg_parser() -> argparse.ArgumentParser:
 
     parser.add_argument("--cover_path", type=str, required=False, default=None,
                         help="The path to the cover image.")
-    parser.add_argument("--cover_position", type=str, required=False, default=None,
+    parser.add_argument("--cover_align", type=str, required=False, default=None,
                         choices=['min', 'mid', 'max'], 
-                        help="The position of the cover image. Default is 'min'")
+                        help="The alignment of the cover image. Default is 'min'")
     parser.add_argument("--cover_crop", type=str, required=False, default=None,
                         choices=['min', 'mid', 'max'], 
                         help="The crop of the cover image. Default is 'min'")

@@ -45,12 +45,12 @@ cover :
   path : "/path/to/cover/file.jpg" # --cover_path
 
   # One of 'min, 'mid', or 'max'
-  # Positioning depends on if the output is landscape or portrait.
+  # Aligning depends on the orientation of the output - landscape or portrait.
   # If landscape then it is relative to the width of the output image.
   #   (min = left, mid = center, max = right)
   # If portrait then it is relative to the height of the output image.
   #   (min = top, mid = center, max = bottom)
-  position : min # --cover_position
+  align : min # --cover_align
 
   # One of 'min, 'mid', or 'max'
   # If the resized image needs to be cropped, this sets what area will be retained.
