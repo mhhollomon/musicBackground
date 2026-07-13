@@ -260,7 +260,10 @@ def _add_cover(config : Any, output_img : Image.Image) -> None :
                                                 cover_cfg['crop'], 
                                                 config['output']['color'])
         else:
-            cover_img = _portrait_cover_square(cover_img, output_size.width, 
+            if cover_cfg['fit'] == 'cover':
+                cover_img = _portrait_cover_fit(config)
+            else :
+                cover_img = _portrait_cover_square(cover_img, output_size.width, 
                                                cover_cfg['crop'], 
                                                config['output']['color'])
 
