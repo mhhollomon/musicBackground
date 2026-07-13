@@ -1,9 +1,10 @@
-
 import argparse
+import os
 import pprint
 import yaml
 from typing import Any
 from dataclasses import dataclass
+import re
 
 # Defaults
 IMAGE_HEIGHT = 1080
@@ -29,6 +30,7 @@ def nvl(*args) -> Any :
 
     return retval
 
+GEOMETRY_PATTERN = re.compile(r'(\d+)x(\d+)')
 @dataclass
 class geometry :
     width : int
@@ -41,16 +43,30 @@ class geometry :
     def from_string(cls, s : str | None) -> 'geometry | None' :
         if s is None :
             return None
-        width, height = s.split('x')
+        
+        match = GEOMETRY_PATTERN.match(s)
+        if match is None :
+            raise ValueError(f"Invalid geometry string: {s}")
+
+        width, height = match.groups()
         return cls(int(width), int(height))
+    
+    def is_square(self) -> bool :
+        return self.width == self.height
+    
+    def is_portrait(self) -> bool :
+        return self.width < self.height
+    
+    def is_landscape(self) -> bool :
+        return self.width > self.height
 
 
 def _build_default_config() -> Any :
     return {
         'output' : { 'path' : None, 'size' : geometry(IMAGE_WIDTH, IMAGE_HEIGHT), 'color' : '#000000' },
-        'logo'   : { 'path' : None, 'size' : LOGO_SIZE },
+        'logo'   : { 'path' : None, 'size' : LOGO_SIZE, 'mask' : 'black' },
         'title'  : { 'text' : None, 'size' : TITLE_FONT_SIZE, 'font' : TITLE_FONT },
-        'cover'  : { 'path' : None },
+        'cover'  : { 'path' : None, 'position' : 'min' },
         'gutter' : GUTTER_SIZE,
     }
 
@@ -70,6 +86,8 @@ def _add_supplied_config(config : Any, supplied_config : Any) :
             config['logo']['path'] = c['path']
         if 'size' in c :
             config['logo']['size'] = int(c['size'])
+        if 'mask' in c :
+            config['logo']['mask'] = c['mask']
 
     if 'title' in supplied_config :
         c = supplied_config['title']
@@ -84,6 +102,8 @@ def _add_supplied_config(config : Any, supplied_config : Any) :
         c = supplied_config['cover']
         if 'path' in c :
             config['cover']['path'] = c['path']
+        if 'position' in c :
+            config['cover']['position'] = c['position']
 
     if 'gutter' in supplied_config :
         config['gutter'] = int(supplied_config['gutter'])
@@ -92,17 +112,20 @@ def _add_supplied_config(config : Any, supplied_config : Any) :
 
 def _add_args(config : Any, args : argparse.Namespace) :
     config['output']['path'] = nvl(args.output_path, config['output']['path'])
-    config['output']['size'] = nvl(geometry.from_string(args.output_size), config['output']['size'])
+    config['output']['size'] = nvl(geometry.from_string(args.output_size), 
+                                   config['output']['size'])
     config['output']['color'] = nvl(args.output_color, config['output']['color'])
 
     config['logo']['path'] = nvl(args.logo, config['logo']['path'])
     config['logo']['size'] = nvl(args.logo_size, config['logo']['size'])
+    config['logo']['mask'] = nvl(args.logo_mask, config['logo']['mask'])
     
     config['title']['text'] = nvl(args.title, config['title']['text'])
     config['title']['size'] = nvl(args.title_size, config['title']['size'])
     config['title']['font'] = nvl(args.title_font, config['title']['font'])
 
     config['cover']['path'] = nvl(args.cover_path, config['cover']['path'])
+    config['cover']['position'] = nvl(args.cover_position, config['cover']['position'])
 
     config['gutter'] = nvl(args.gutter, config['gutter'])
 
@@ -123,3 +146,37 @@ def build_config(args : argparse.Namespace) -> Any:
     pprint.pprint(retval)
 
     return retval
+
+def validate_config(config : Any) -> bool :
+    if config['output']['path'] is None:
+        print("No output path specified")
+        return False
+    else :
+        if not os.path.exists(os.path.dirname(config['output']['path'])):
+            print(f"The directory {os.path.dirname(config['output']['path'])} does not exist.")
+            return False
+        ext = os.path.splitext(config['output']['path'])[1]
+        if ext not in ('.png', '.jpeg', '.jpg'):
+            print(f"Unsupported output file type: {ext}")
+            return False
+    
+    if config['output']['size'].is_square() :
+        print("Square output is currently not supported")
+        return False
+    
+    width, height = config['output']['size'].to_tuple()
+    if width < 1 or height < 1:
+        print("Invalid output size")
+        return False
+
+    if config['cover']['path'] is not None:
+        if not os.path.isfile(config['cover']['path']):
+            print(f"The cover image file {config['cover']['path']} does not exist.")
+            return False
+
+    if config['logo']['path'] is not None:
+        if not os.path.isfile(config['logo']['path']):
+            print(f"The logo image file {config['logo']['path']} does not exist.")
+            return False
+
+    return True

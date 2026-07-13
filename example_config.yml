@@ -1,25 +1,53 @@
 # Specs for the final image
 output :
+  # on PNG and JPG (or JPEG) outputs are currently supported.
+  # The extension on the filename will be used to determine the format.
   path : "/path/to/output/file.png" # --output_path
+
+  # This is the size of the output image in WIDTHxHEIGHT format.
   size : 1980x1080 # ---output_size
+
   # This is the base color of the output image. It will be the
   # color of any area that isn't otherwise covered by the various elements.
-  # Currently only hex color codes are supported
+  # Currently only hex color codes, 'black' and 'white' are supported.
+  # 'black' is the default.
   color : "#000000" # --output_color
 
 # Information about the logo image that goes in the lower right corner
 logo :
-  path : "/path/to/image/file" # --logo
+  path : "/path/to/image/file.jpg" # --logo
+
+  # size in pixels for the logo. aspect ratio will be preserved.
+  # The largest dimension of the logo will be scaled to this size.
   size : 200 # size in pixels --logo_size
 
-# Information about the title that goes in the upper right corner
+  # Algorithm to compute a mask for the logo image.
+  # "self" uses the luminance channel of the image as-is. This means that
+  # the background will show through at least a little on any part of
+  # the logo image that is not fully white.
+  # "black" clamps the luminance channel, so that only black pixels in the logo 
+  # are transparent. 'black' is the default.
+  mask : black # --logo_mask
+
+# Information about the title text.
 title :
   text : "This is the title" # --title
+
+  # Size of the text in pixels (not points)
   # This size is a maximum. If the text does not fit, it will be scaled down.
-  size : 200 # size in pixels - --title_size
-  font : 'DejaVuSans.ttf' # not currently overidable
+  size : 200 # --title_size
+
+  # Font to use for the title.
+  font : 'DejaVuSans.ttf' # --title_font
 
 cover :
   path : "/path/to/cover/file.jpg" # --cover_path
+  # one of 'min, 'mid', or 'max'
+  # Positioning depends to the if the output is landscape or portrait.
+  # If landscape then it is relative to the width of the output image.
+  #   (min = left, mid = center, max = right)
+  # If portrait then it is relative to the height of the output image.
+  #   (min = top, mid = center, max = bottom)
+  position : min # --cover_position
 
 gutter : 10 # --gutter
