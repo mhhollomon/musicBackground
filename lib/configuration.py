@@ -66,7 +66,8 @@ def _build_default_config() -> Any :
         'output' : { 'path' : None, 'size' : geometry(IMAGE_WIDTH, IMAGE_HEIGHT), 'color' : '#000000' },
         'logo'   : { 'path' : None, 'size' : LOGO_SIZE, 'mask' : 'black' },
         'title'  : { 'text' : None, 'size' : TITLE_FONT_SIZE, 'font' : TITLE_FONT },
-        'cover'  : { 'path' : None, 'align' : 'min', 'crop' : 'min' },
+        'cover'  : { 'path' : None, 'align' : 'min', 'crop' : 'min', 
+                    'fit' : 'square', 'color' : None },
         'gutter' : GUTTER_SIZE,
     }
 
@@ -106,6 +107,9 @@ def _add_supplied_config(config : Any, supplied_config : Any) :
             config['cover']['align'] = c['align']
         if 'crop' in c :
             config['cover']['crop'] = c['crop']
+        if 'fit' in c :
+            config['cover']['fit'] = c['fit']
+
 
     if 'gutter' in supplied_config :
         config['gutter'] = int(supplied_config['gutter'])
@@ -129,6 +133,7 @@ def _add_args(config : Any, args : argparse.Namespace) :
     config['cover']['path'] = nvl(args.cover_path, config['cover']['path'])
     config['cover']['align'] = nvl(args.cover_align, config['cover']['align'])
     config['cover']['crop'] = nvl(args.cover_crop, config['cover']['crop'])
+    config['cover']['fit'] = nvl(args.cover_fit, config['cover']['fit'])
 
     config['gutter'] = nvl(args.gutter, config['gutter'])
 
@@ -145,6 +150,11 @@ def build_config(args : argparse.Namespace) -> Any:
         retval = _add_supplied_config(retval, supplied_config)
 
     retval = _add_args(retval, args)
+
+    # some helpers. Makes the code a littler cleaner.
+    # Make sure we inherit the output color
+    # even if overriden in the args.
+    retval['cover']['color'] = retval['output']['color']
 
     pprint.pprint(retval)
 

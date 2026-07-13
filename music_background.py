@@ -153,6 +153,97 @@ def _portrait_cover_square(cover_img : Image.Image, cover_side : int, crop : str
 
     return cover_img
 
+def _landscape_cover_fit(config : Any) -> Image.Image:
+    print("-- Landscape cover fit")
+    cover_cfg = config['cover']
+
+    required_size = config['output']['size']
+
+    cover_img = Image.open(cover_cfg['path'])
+
+    orig_width, orig_height = cover_img.size
+    aspect_ratio = orig_width / orig_height
+
+    # try maxxing width first
+    new_width = required_size.width
+    new_height = int(new_width / aspect_ratio)
+    if new_height < required_size.height:
+        new_width = int(required_size.height * aspect_ratio)
+        new_height = required_size.height
+    
+    cover_img = cover_img.resize((new_width, new_height))
+    if new_height > required_size.height:
+        if cover_cfg['crop'] == 'min':
+           height_offset = 0
+        elif cover_cfg['crop'] == 'mid':
+            height_offset = (new_height - required_size.height) // 2
+        elif cover_cfg['crop'] == 'max':
+            height_offset = new_height - required_size.height
+    else :
+        height_offset = 0
+
+    if new_width > required_size.width:
+        if cover_cfg['crop'] == 'min':
+            width_offset = 0
+        elif cover_cfg['crop'] == 'mid':
+            width_offset = (new_width - required_size.width) // 2
+        elif cover_cfg['crop'] == 'max':
+            width_offset = new_width - required_size.width
+    else :
+        width_offset = 0
+
+    if width_offset != 0 or height_offset != 0:
+        box = (width_offset, height_offset, width_offset + required_size.width,
+               height_offset + required_size.height)
+        cover_img = cover_img.crop(box)
+
+    return cover_img
+
+def _portrait_cover_fit(config : Any) -> Image.Image:
+    cover_cfg = config['cover']
+
+    required_size = config['output']['size']
+
+    cover_img = Image.open(cover_cfg['path'])
+
+    orig_width, orig_height = cover_img.size
+    aspect_ratio = orig_height / orig_width
+
+    # try maxxing width first
+    new_height = required_size.height
+    new_width = int(new_height * aspect_ratio)
+    if new_width < required_size.width:
+        new_height = int(required_size.width / aspect_ratio)
+        new_width = required_size.width
+    
+    cover_img = cover_img.resize((new_width, new_height))
+    if new_width > required_size.width:
+        if cover_cfg['crop'] == 'min':
+           width_offset = 0
+        elif cover_cfg['crop'] == 'mid':
+            width_offset = (new_width - required_size.width) // 2
+        elif cover_cfg['crop'] == 'max':
+            width_offset = new_width - required_size.width
+    else :
+        width_offset = 0
+
+    if new_height > required_size.height:
+        if cover_cfg['crop'] == 'min':
+            height_offset = 0
+        elif cover_cfg['crop'] == 'mid':
+            height_offset = (new_height - required_size.height) // 2
+        elif cover_cfg['crop'] == 'max':
+            height_offset = new_height - required_size.height
+    else :
+        height_offset = 0
+
+    if width_offset != 0 or height_offset != 0:
+        box = (width_offset, height_offset, width_offset + required_size.width,
+               height_offset + required_size.height)
+        cover_img = cover_img.crop(box)
+
+    return cover_img
+
 def _add_cover(config : Any, output_img : Image.Image) -> None :
 
     cover_cfg = config['cover']
@@ -162,7 +253,10 @@ def _add_cover(config : Any, output_img : Image.Image) -> None :
         output_size = config['output']['size']
 
         if output_size.is_landscape():
-            cover_img = _landscape_cover_square(cover_img, output_size.height, 
+            if cover_cfg['fit'] == 'cover':
+                cover_img = _landscape_cover_fit(config)
+            else :
+                cover_img = _landscape_cover_square(cover_img, output_size.height, 
                                                 cover_cfg['crop'], 
                                                 config['output']['color'])
         else:
@@ -240,6 +334,9 @@ def build_arg_parser() -> argparse.ArgumentParser:
     parser.add_argument("--cover_crop", type=str, required=False, default=None,
                         choices=['min', 'mid', 'max'], 
                         help="The crop of the cover image. Default is 'min'")
+    parser.add_argument("--cover_fit", type=str, required=False, default=None,
+                        choices=['square', 'cover'], 
+                        help="The fit of the cover image. Default is 'square'")
 
     parser.add_argument("--logo", type=str, required=False, default=None,
                         help="The path to the logo image. If not specified, no logo will be added.")
