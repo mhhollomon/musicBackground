@@ -1,25 +1,128 @@
+# The configuration file is designed to allow you
+# to set defaults to use for a group of images.
+# So, for instance an album will use the same cover image and logo,
+# but different titles and output files.
+
+# The image is built in the following order
+# 1.The background
+# 2. The cover image
+# 3. The logo
+# 4. The title text
+
+# COLORS
+# You can use the following formats for colors:
+#    HTML hex code #RRGGBB
+#    Common HTML named colors
+#    RGB function "rgb(r,g,b)" or percentages "rgb(r%,g%,b%)"
+#    HSL function "hsl(h,s,l)" or percentages "hsl(h,s%,l%)" 
+#    HSV function "hsv(h,s,v)" or percentages "hsv(h,s%,v%)"
+
 # Specs for the final image
 output :
+  # Only PNG and JPG (or JPEG) outputs are currently supported.
+  # The extension on the filename will be used to determine the format.
   path : "/path/to/output/file.png" # --output_path
+
+  # This is the size of the output image in WIDTHxHEIGHT format.
   size : 1980x1080 # ---output_size
+
   # This is the base color of the output image. It will be the
   # color of any area that isn't otherwise covered by the various elements.
-  # Currently only hex color codes are supported
-  color : "#000000" # --output_color
+  # 'black' is the default.
+  color : "rgb(0,0,0)" # --output_color
 
-# Information about the logo image that goes in the lower right corner
+
+# Gap between the title or logo and the edge of the output image
+gutter : 10 # --gutter
+
+# Information about the cover image
+cover :
+  # The path to the cover image.
+  # The image can be any type supported by the `pillow` module.
+  path : "/path/to/cover/file.png" # --cover_path
+
+  # How the cover is resized to fit on the background.
+  # 'square' will resize the cover, then crop to a square.
+  # 'cover' will resize the cover, then crop to fit the output image.
+  fit : square # --cover_fit
+
+  # One of 'min, 'mid', or 'max'
+  # Aligning depends on the orientation of the output - landscape or portrait.
+  # If landscape then it is relative to the width of the output image.
+  #   (min = left, mid = center, max = right)
+  # If portrait then it is relative to the height of the output image.
+  #   (min = top, mid = center, max = bottom)
+  # This is not used if the fit is `cover`.
+  align : min # --cover_align
+
+  # One of 'min, 'mid', or 'max'
+  # If the resized image needs to be cropped, this sets what area will be retained.
+  # Similar to 'align', the exact effect depends on the orientation
+  # of the output image.
+  # 'mid' is the default
+  # If the resized image is small, then this controls where in the 
+  # square the image will be placed.
+  # This will happen, for instance, if a portrait image is used
+  # as a cover in a landscape formatted output.
+  crop : mid # --cover_crop
+
+# Information about the logo image
 logo :
-  path : "/path/to/image/file" # --logo
+  # The path to the logo image
+  # The image can be any type supported by the `pillow` module.
+  path : "/path/to/image/file.jpg" # --logo
+
+  # size in pixels for the logo. aspect ratio will be preserved.
+  # The largest dimension of the logo will be scaled to this size.
   size : 200 # size in pixels --logo_size
 
-# Information about the title that goes in the upper right corner
+  # Algorithm to compute a mask for the logo image.
+  # "self" uses the luminance channel of the image as-is. This means that
+  # the background will show through at least a little on any part of
+  # the logo image that is not fully white.
+  # "black" clamps the luminance channel, so that only black pixels in the logo 
+  # are transparent. 'black' is the default.
+  # 'none' : No masking is done.
+  mask : black # --logo_mask
+
+  # Position for the logo on the output.
+  # In the format Width-Height
+  # Width is one of 'left', 'center', 'right'
+  # Height is one of 'top', 'center', 'bottom'
+  # The logo will be placed using the `gutter` parameter as a standoff
+  # from the edge of the output image.
+  position : right-bottom # --logo_position
+
+# Information about the title text.
 title :
   text : "This is the title" # --title
+
+  # Size of the text in pixels (not points)
   # This size is a maximum. If the text does not fit, it will be scaled down.
-  size : 200 # size in pixels - --title_size
-  font : 'DejaVuSans.ttf' # not currently overidable
+  size : 200 # --title_size
 
-cover :
-  path : "/path/to/cover/file.jpg" # --cover_path
+  # Font to use for the title.
+  font : 'DejaVuSans.ttf' # --title_font
 
-gutter : 10 # --gutter
+  # Position for the title on the output.
+  # In the format Width-Height
+  # Width is one of 'left', 'center', 'right'
+  # Height is one of 'top', 'center', 'bottom'
+  # The title will be placed using the `gutter` parameter as a standoff
+  # from the edge of the output image.
+  position : right-top # --title_position
+
+  # Fill color for the title
+  # see above for color formats.
+  # White is the default
+  fill : "hsv(0,0%,100%)" # --title_fill
+
+  # Control the stroke.
+  # See above for color formats.
+  # If width is 0, no stroke is drawn (the default).
+  # Default stroke color is white.
+  stroke :
+    color : "hsv(0,0%,100%)" # --title_stroke_color
+    width : 2 # --title_stroke_width
+
+
