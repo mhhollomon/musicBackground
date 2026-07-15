@@ -333,10 +333,15 @@ def _add_title(config : Any, output_img : Image.Image) -> None :
 
     print(f"text_size = {text_size}")
 
-    max_text_width = output_size.width - output_size.height - (config['gutter'] * 2)
+    if output_size.is_landscape():
+        max_text_width = output_size.width - output_size.height - (config['gutter'] * 2)
+    else:
+        max_text_width = output_size.width - (config['gutter'] * 2)
     if (text_size.width > max_text_width):
         # The text is too long, so we need to scale it down
-        title_font = ImageFont.truetype('DejaVuSans.ttf', title_cfg['size'] * (max_text_width / text_size.width))
+        new_size = title_cfg['size'] * (max_text_width / text_size.width)
+        print (f"New title font size = {new_size}")
+        title_font = ImageFont.truetype(title_cfg['font'], new_size)
         text_size = _get_text_size(title_cfg['text'], title_font)
 
     offsets = _position_to_offset(title_cfg['position'], output_size, text_size, config['gutter'])
