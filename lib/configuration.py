@@ -208,8 +208,9 @@ def validate_config(config : Any) -> bool :
         print("No output path specified")
         return False
     else :
-        if not os.path.exists(os.path.dirname(config['output']['path'])):
-            print(f"The directory {os.path.dirname(config['output']['path'])} does not exist.")
+        dirname = os.path.dirname(config['output']['path'])
+        if dirname != "" and not os.path.exists(dirname) :
+            print(f"The directory {dirname} does not exist.")
             return False
         ext = os.path.splitext(config['output']['path'])[1]
         if ext not in ('.png', '.jpeg', '.jpg'):
