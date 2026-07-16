@@ -17,7 +17,21 @@
 #    HSL function "hsl(h,s,l)" or percentages "hsl(h,s%,l%)" 
 #    HSV function "hsv(h,s,v)" or percentages "hsv(h,s%,v%)"
 
-# Specs for the final image
+#---------------------------------
+# Global Configuration
+#---------------------------------
+
+# Gap between the title or logo and the edge of the output image
+gutter : 10 # --gutter
+
+# Font - This is the font that will be used for all text items
+# unless it is overridden in the configuration for that item.
+# The default value will vary according to the platform.
+font : 'My Cool Font' # --font
+
+#---------------------------------
+# Output Configuration
+#---------------------------------
 output :
   # Only PNG and JPG (or JPEG) outputs are currently supported.
   # The extension on the filename will be used to determine the format.
@@ -31,13 +45,11 @@ output :
   # 'black' is the default.
   color : "rgb(0,0,0)" # --output_color
 
-
-# Gap between the title or logo and the edge of the output image
-gutter : 10 # --gutter
-
-# Information about the cover image
+#---------------------------------
+# Cover Image Configuration
+#---------------------------------
 cover :
-  # The path to the cover image.
+  # The path to the image.
   # The image can be any type supported by the `pillow` module.
   path : "/path/to/cover/file.png" # --cover_path
 
@@ -66,7 +78,9 @@ cover :
   # as a cover in a landscape formatted output.
   crop : mid # --cover_crop
 
-# Information about the logo image
+#---------------------------------
+# Logo Image Configuration
+#---------------------------------
 logo :
   # The path to the logo image
   # The image can be any type supported by the `pillow` module.
@@ -93,7 +107,9 @@ logo :
   # from the edge of the output image.
   position : right-bottom # --logo_position
 
-# Information about the title text.
+#---------------------------------
+# Track Title Configuration
+#---------------------------------
 title :
   text : "This is the title" # --title
 
@@ -102,6 +118,7 @@ title :
   size : 200 # --title_size
 
   # Font to use for the title.
+  # defaults to the global font setting if not given (see above).
   font : 'DejaVuSans.ttf' # --title_font
 
   # Position for the title on the output.

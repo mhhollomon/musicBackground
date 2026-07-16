@@ -80,8 +80,9 @@ class position :
 
 def _build_default_config() -> Any :
     return {
-        'output' : { 'path' : None, 'size' : geometry(IMAGE_WIDTH, IMAGE_HEIGHT), 'color' : '#000000' },
         'gutter' : GUTTER_SIZE,
+        'font'   : None,
+        'output' : { 'path' : None, 'size' : geometry(IMAGE_WIDTH, IMAGE_HEIGHT), 'color' : '#000000' },
         'cover'  : { 'path' : None, 'align' : 'min', 'crop' : 'min', 
                     'fit' : 'square', 'color' : None },
         'logo'   : { 'path' : None, 'size' : LOGO_SIZE, 'mask' : 'black', 
@@ -94,6 +95,12 @@ def _build_default_config() -> Any :
     }
 
 def _add_supplied_config(config : Any, supplied_config : Any) :
+    if 'gutter' in supplied_config :
+        config['gutter'] = int(supplied_config['gutter'])
+
+    if 'font' in supplied_config :
+        config['font'] = supplied_config['font']
+
     if 'output' in supplied_config :
         c = supplied_config['output']
         if 'path' in c :
@@ -102,9 +109,6 @@ def _add_supplied_config(config : Any, supplied_config : Any) :
             config['output']['size'] = geometry.from_string(c['size'])
         if 'color' in c :
             config['output']['color'] = c['color']
-
-    if 'gutter' in supplied_config :
-        config['gutter'] = int(supplied_config['gutter'])
 
     if 'cover' in supplied_config :
         c = supplied_config['cover']
@@ -151,12 +155,13 @@ def _add_supplied_config(config : Any, supplied_config : Any) :
     return config
 
 def _add_args(config : Any, args : argparse.Namespace) :
+    config['gutter'] = nvl(args.gutter, config['gutter'])
+    config['font'] = nvl(args.font, config['font'])
+
     config['output']['path'] = nvl(args.output_path, config['output']['path'])
     config['output']['size'] = nvl(geometry.from_string(args.output_size), 
                                    config['output']['size'])
     config['output']['color'] = nvl(args.output_color, config['output']['color'])
-
-    config['gutter'] = nvl(args.gutter, config['gutter'])
 
     config['cover']['path'] = nvl(args.cover_path, config['cover']['path'])
     config['cover']['align'] = nvl(args.cover_align, config['cover']['align'])
@@ -182,6 +187,10 @@ def _add_args(config : Any, args : argparse.Namespace) :
 
     return config
 
+def _get_default_font() :
+    import sys
+    return 'Arial' if sys.platform == 'darwin' else 'Liberation Sans'
+
 def build_config(args : argparse.Namespace) -> Any:
 
     retval = _build_default_config()
@@ -199,7 +208,18 @@ def build_config(args : argparse.Namespace) -> Any:
     # even if overriden in the args.
     retval['cover']['color'] = retval['output']['color']
 
-    pprint.pprint(retval)
+    # set a default font that depends on the platform
+    if retval['font'] is None:
+        retval['font'] = _get_default_font()
+
+    #update the other fonts to use this if needed.
+    if retval['title']['font'] is None:
+        retval['title']['font'] = retval['font']
+
+    print("++ Using configuration:")
+    pprint.pp(retval)
+    print("\n")
+
 
     return retval
 

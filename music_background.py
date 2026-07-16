@@ -76,19 +76,23 @@ def _build_logo(config : Any) -> Tuple[Image.Image, Image.Image | None] | None :
     
 def _add_logo(config : Any, output_img : Image.Image) -> None :
     logo_img = _build_logo(config)
-    if logo_img is not None:
-        logo_img, mask_img = logo_img
-        logo_width, logo_height = logo_img.size
-        output_size = config['output']['size']
-        position = config['logo']['position']
+    if logo_img is None:
+        print("++ Skipping logo")
+        return
+    
+    print("++ Adding logo")
+    logo_img, mask_img = logo_img
+    logo_width, logo_height = logo_img.size
+    output_size = config['output']['size']
+    position = config['logo']['position']
 
-        offsets = _position_to_offset(position, output_size, geometry(logo_width, logo_height), config['gutter'])
+    offsets = _position_to_offset(position, output_size, geometry(logo_width, logo_height), config['gutter'])
 
-        # Paste the logo
-        if mask_img is not None:
-            output_img.paste(logo_img, offsets, mask=mask_img)
-        else:
-            output_img.paste(logo_img, offsets)
+    # Paste the logo
+    if mask_img is not None:
+        output_img.paste(logo_img, offsets, mask=mask_img)
+    else:
+        output_img.paste(logo_img, offsets)
 
 #--------------------------------------------------------------------------------
 # COVER
@@ -190,7 +194,6 @@ def _portrait_cover_square(config :Any) -> Image.Image :
     return cover_img
 
 def _landscape_cover_fit(config : Any) -> Image.Image:
-    print("-- Landscape cover fit")
     cover_cfg = config['cover']
 
     required_size = config['output']['size']
@@ -286,6 +289,8 @@ def _add_cover(config : Any, output_img : Image.Image) -> None :
 
     output_size = config['output']['size']
 
+    print("++ Adding cover")
+
     if output_size.is_landscape():
         if cover_cfg['fit'] == 'cover':
             cover_img = _landscape_cover_fit(config)
@@ -323,7 +328,10 @@ def _add_title(config : Any, output_img : Image.Image) -> None :
     title_cfg = config['title']
 
     if title_cfg is None or title_cfg['text'] is None:
+        print("++ Skipping title")
         return
+    
+    print("++ Adding title")
 
     output_size = config['output']['size']
 
@@ -331,7 +339,6 @@ def _add_title(config : Any, output_img : Image.Image) -> None :
     title_font = ImageFont.truetype(title_cfg['font'], title_cfg['size'])
     text_size = _get_text_size(title_cfg['text'], title_font)
 
-    print(f"text_size = {text_size}")
 
     if output_size.is_landscape():
         max_text_width = output_size.width - output_size.height - (config['gutter'] * 2)
@@ -340,7 +347,6 @@ def _add_title(config : Any, output_img : Image.Image) -> None :
     if (text_size.width > max_text_width):
         # The text is too long, so we need to scale it down
         new_size = title_cfg['size'] * (max_text_width / text_size.width)
-        print (f"New title font size = {new_size}")
         title_font = ImageFont.truetype(title_cfg['font'], new_size)
         text_size = _get_text_size(title_cfg['text'], title_font)
 
@@ -363,7 +369,9 @@ def build_image(config : Any) :
     output_path = config['output']['path']
     output_size = config['output']['size']
 
+    print("++ Creating background")
     output_img = Image.new("RGB", output_size.to_tuple(), color=config['output']['color'])
+
 
     _add_cover(config, output_img)
 
@@ -376,9 +384,20 @@ def build_image(config : Any) :
 
 def build_arg_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser()
+
+    # --- Application Level Arguments ---
     parser.add_argument("--config_file", "-c", type=str, required=False, default=None,
                         help="yaml file containing configuration values. Most can then be overridden on the command line.")
 
+    # --- GLOBAL ARGUMENTS ---
+    parser.add_argument("--gutter", type=int, required=False, default=None,
+                        help="The size of the gutter between the edge of the output image and the title."
+                        " If not specified, the gutter will be 10 pixels.")
+    parser.add_argument("--font", type=str, required=False, default=None,
+                        help="The default font to use for for any text."
+                        " If not specified, the font will be the default system font.")
+
+    # --- OUTPUT ARGUMENTS ---
     parser.add_argument("--output_path", type=str, required=False, default=None,
                         help="The path and filename on to which to write the output." 
                         " The extension given on the filename will be used to determine the format.")
@@ -387,6 +406,7 @@ def build_arg_parser() -> argparse.ArgumentParser:
     parser.add_argument("--output_color", type=str, required=False, default=None,
                         help="The background color of the output image.")
 
+    # --- COVER ARGUMENTS ---
     parser.add_argument("--cover_path", type=str, required=False, default=None,
                         help="The path to the cover image.")
     parser.add_argument("--cover_align", type=str, required=False, default=None,
@@ -399,6 +419,7 @@ def build_arg_parser() -> argparse.ArgumentParser:
                         choices=['square', 'cover'], 
                         help="The fit of the cover image. Default is 'square'")
 
+    # --- LOGO ARGUMENTS ---
     parser.add_argument("--logo", type=str, required=False, default=None,
                         help="The path to the logo image. If not specified, no logo will be added.")
     parser.add_argument("--logo_size", type=int, default=None, required=False,
@@ -409,6 +430,7 @@ def build_arg_parser() -> argparse.ArgumentParser:
     parser.add_argument("--logo_position", type=str, required=False, default=None,
                         help="The position of the logo on the output image. Must be in the format 'WIDTH-HEIGHT'.")
 
+    # --- TRACK TITLE ARGUMENTS ---
     parser.add_argument("--title", type=str, required=False, default=None,
                         help="The text to display in the title. If not specified, no title will be added.")
     parser.add_argument("--title_size", type=int, required=False, default=None,
@@ -423,10 +445,6 @@ def build_arg_parser() -> argparse.ArgumentParser:
                         help="The stroke color for the title text.")
     parser.add_argument("--title_stroke_width", type=int, required=False, default=None,
                         help="The stroke width for the title text.")
-
-    parser.add_argument("--gutter", type=int, required=False, default=None,
-                        help="The size of the gutter between the edge of the output image and the title."
-                        " If not specified, the gutter will be 10 pixels.")
     return parser
 
 
