@@ -9,7 +9,7 @@ from PIL import ImageFont
 
 import sys
 
-from lib.configuration import Config, build_config, geometry, validate_config, position
+from lib.configuration import Config, TextSettings, build_config, geometry, validate_config, position
 
 
 def _get_text_size(text : str, font : ImageFont.FreeTypeFont) -> geometry:
@@ -19,7 +19,10 @@ def _get_text_size(text : str, font : ImageFont.FreeTypeFont) -> geometry:
     size = geometry(int(box[2]-box[0]), int(box[3]-box[1]))
     return size
 
-def _position_to_offset(pos : position, img_size : geometry, elem_size : geometry, gutter : int) -> Tuple[int, int] :
+def _position_to_offset(pos : position | None, img_size : geometry, elem_size : geometry, gutter : int) -> Tuple[int, int] :
+    if pos is None :
+        raise ValueError("Position is None")
+    
     # Calculate the offset
     if pos.w == 'left':
         width_offset = gutter
@@ -325,20 +328,18 @@ def _add_cover(config : Any, output_img : Image.Image) -> None :
 # TITLE
 #--------------------------------------------------------------------------------
 
-def _add_title(config : Any, output_img : Image.Image) -> None :
-    title_cfg = config.title
-
-    if not title_cfg.has_text():
-        print("++ Skipping title")
+def text_to_image(config : Config, text_cfg : TextSettings, text_type : str, output_img : Image.Image) -> None :
+    if not text_cfg.has_text():
+        print(f"++ Skipping {text_type} text")
         return
     
-    print("++ Adding title")
+    print(f"++ Adding {text_type} text")
 
     output_size = config.output.size
 
     draw = ImageDraw.Draw(output_img)
-    title_font = ImageFont.truetype(title_cfg.font, title_cfg.size)
-    text_size = _get_text_size(title_cfg.text, title_font)
+    title_font = ImageFont.truetype(text_cfg.font, text_cfg.size)
+    text_size = _get_text_size(text_cfg.text, title_font)
 
     gutter = config.globals.gutter
 
@@ -348,19 +349,19 @@ def _add_title(config : Any, output_img : Image.Image) -> None :
         max_text_width = output_size.width - (gutter * 2)
     if (text_size.width > max_text_width):
         # The text is too long, so we need to scale it down
-        new_size = title_cfg.size * (max_text_width / text_size.width)
-        title_font = ImageFont.truetype(title_cfg.font, new_size)
-        text_size = _get_text_size(title_cfg.text, title_font)
+        new_size = text_cfg.size * (max_text_width / text_size.width)
+        title_font = ImageFont.truetype(text_cfg.font, new_size)
+        text_size = _get_text_size(text_cfg.text, title_font)
 
-    offsets = _position_to_offset(title_cfg.position, output_size, text_size, gutter)
+    offsets = _position_to_offset(text_cfg.position, output_size, text_size, gutter)
 
-    if title_cfg.stroke.exists():
-        stroke_params = { 'stroke_fill' : title_cfg.stroke.color,
-                          'stroke_width' : title_cfg.stroke.width }
+    if text_cfg.stroke.exists():
+        stroke_params = { 'stroke_fill' : text_cfg.stroke.color,
+                          'stroke_width' : text_cfg.stroke.width }
     else :
         stroke_params = {}
 
-    draw.text(offsets, title_cfg.text, font=title_font, fill=title_cfg.fill, **stroke_params)
+    draw.text(offsets, text_cfg.text, font=title_font, fill=text_cfg.fill, **stroke_params)
 
 #--------------------------------------------------------------------------------
 # TOP LEVEL FUNCTION
@@ -379,7 +380,8 @@ def build_image(config : Config) :
 
     _add_logo(config, output_img)
 
-    _add_title(config, output_img)
+    text_to_image(config, config.title, 'track', output_img)
+    text_to_image(config, config.album, 'album', output_img)
 
     # Save the image
     output_img.save(output_path)
@@ -447,6 +449,25 @@ def build_arg_parser() -> argparse.ArgumentParser:
                         help="The stroke color for the title text.")
     parser.add_argument("--title_stroke_width", type=int, required=False, default=None,
                         help="The stroke width for the title text.")
+    
+    
+    # --- ALBUM TITLE ARGUMENTS ---
+    parser.add_argument("--album", type=str, required=False, default=None,
+                        help="The text to display in the album. If not specified, no album will be added.")
+    parser.add_argument("--album_size", type=int, required=False, default=None,
+                        help="The size of the album text. If not specified, the album will be scaled to 200 pixels.")
+    parser.add_argument("--album_font", type=str, required=False, default=None,
+                        help="The font to use for the album text. If not specified, the default font will be used.")
+    parser.add_argument("--album_position", type=str, required=False, default=None,
+                        help="The position of the album text on the output image. Must be in the format 'WIDTH-HEIGHT'.")
+    parser.add_argument("--album_fill", type=str, required=False, default=None,
+                        help="The fill color for the album text.")
+    parser.add_argument("--album_stroke_color", type=str, required=False, default=None,
+                        help="The stroke color for the album text.")
+    parser.add_argument("--album_stroke_width", type=int, required=False, default=None,
+                        help="The stroke width for the album text.")
+
+    
     return parser
 
 

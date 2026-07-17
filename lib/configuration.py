@@ -12,20 +12,11 @@ LOGO_SIZE = 200
 TITLE_FONT_SIZE = 200
 GUTTER_SIZE = 10
 
-def nvl(*args) -> Any :
-    """
-    Returns the first argument that is not None.
-    If all arguments are None, returns None.
-    """
-
-    try :
-        retval = next(item for item in args if item is not None)
-    except StopIteration:
-        retval = None
-
-    return retval
 
 class NoneDict :
+    """Alway return None if the key is not found.
+    Also, support path keys like 'a.b.c'
+    """
     def __init__(self, config : dict) :
         self.config = config
 
@@ -114,7 +105,7 @@ class PathSetting(Settings) :
 @dataclass
 class GlobalSettings(Settings) :
     gutter : int
-    font : str | None
+    font : str
 
 @dataclass
 class OutputSettings(PathSetting) :
@@ -147,15 +138,15 @@ class StrokeSettings(Settings) :
 
 @dataclass 
 class TextSettings(Settings) :
-    text : str | None
+    text : str
     size : int
-    font : str | None
+    font : str
     position : position | None
     fill : str
     stroke : StrokeSettings
 
     def has_text(self) -> bool :
-        return self.text is not None
+        return self.text is not None and self.text != ''
 
 @dataclass
 class Config(Settings) :
@@ -164,16 +155,21 @@ class Config(Settings) :
     cover   : CoverSettings
     logo    : LogoSettings
     title   : TextSettings
+    album   : TextSettings
 
 def _build_default_config() -> Config :
 
     return Config(
-        globals = GlobalSettings(GUTTER_SIZE, None),
+        globals = GlobalSettings(GUTTER_SIZE, ''),
         output  = OutputSettings("", geometry(IMAGE_WIDTH, IMAGE_HEIGHT), '#000000'),
         cover   = CoverSettings('', 'min', 'min', 'square', None),
         logo    = LogoSettings('', LOGO_SIZE, 'black', position.from_string('right-bottom')),
-        title   = TextSettings(None, TITLE_FONT_SIZE, None, 
+        title   = TextSettings('', TITLE_FONT_SIZE, '', 
                                 position.from_string('right-top'), 
+                                '#ffffff', 
+                                StrokeSettings('#ffffff', 0)),
+        album   = TextSettings('', TITLE_FONT_SIZE // 2, '', 
+                                position.from_string('right-center'), 
                                 '#ffffff', 
                                 StrokeSettings('#ffffff', 0)),
     )
@@ -204,6 +200,14 @@ def _add_supplied_config(config : Config, new_cfg : NoneDict) :
     config.title.stroke.override('color', new_cfg['title.stroke.color'])
     config.title.stroke.override('width', new_cfg['title.stroke.width'])
 
+    config.album.override('text', new_cfg['album.text'])
+    config.album.override('size', new_cfg['album.size'])
+    config.album.override('font', new_cfg['album.font'])
+    config.album.override('position', position.from_string(new_cfg['album.position']))
+    config.album.override('fill', new_cfg['album.fill'])
+    config.album.stroke.override('color', new_cfg['album.stroke.color'])
+    config.album.stroke.override('width', new_cfg['album.stroke.width'])
+
     return config
 
 def _add_args(config : Config, args : argparse.Namespace) :
@@ -231,6 +235,14 @@ def _add_args(config : Config, args : argparse.Namespace) :
     config.title.override('fill', args.title_fill)
     config.title.stroke.override('color', args.title_stroke_color)
     config.title.stroke.override('width', args.title_stroke_width)
+
+    config.album.override('text', args.album)
+    config.album.override('size', args.album_size)
+    config.album.override('font', args.album_font)
+    config.album.override('position', position.from_string(args.album_position))
+    config.album.override('fill', args.album_fill)
+    config.album.stroke.override('color', args.album_stroke_color)
+    config.album.stroke.override('width', args.album_stroke_width)
 
     return config
 
@@ -268,6 +280,7 @@ def build_config(args : argparse.Namespace) -> Config:
 
     # update the other fonts to use this if needed.
     retval.title.default('font', retval.globals.font) 
+    retval.album.default('font', retval.globals.font) 
 
     print("++ Using configuration:")
     # pprint.pp(retval)
@@ -318,6 +331,11 @@ def validate_config(config : Config) -> bool :
     if config.title.has_text():
         if config.title.stroke.width < 0:
             print("Title stroke width must be >= 0")
+            return False
+        
+    if config.album.has_text():
+        if config.album.stroke.width < 0:
+            print("Album stroke width must be >= 0")
             return False
 
     return True
