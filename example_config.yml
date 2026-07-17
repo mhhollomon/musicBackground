@@ -33,7 +33,7 @@ font : 'My Cool Font' # --font
 # Output Configuration
 #---------------------------------
 output :
-  # Only PNG and JPG (or JPEG) outputs are currently supported.
+  # Only PNG, JPG (or JPEG), and WEBP outputs are currently supported.
   # The extension on the filename will be used to determine the format.
   path : "/path/to/output/file.png" # --output_path
 

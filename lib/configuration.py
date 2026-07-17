@@ -1,6 +1,5 @@
 import argparse
 import os
-import pprint
 import yaml
 from typing import Any
 from dataclasses import dataclass
@@ -9,12 +8,8 @@ import re
 # Defaults
 IMAGE_HEIGHT = 1080
 IMAGE_WIDTH = 1920
-
 LOGO_SIZE = 200
-
-TITLE_FONT = 'DejaVuSans.ttf'
 TITLE_FONT_SIZE = 200
-
 GUTTER_SIZE = 10
 
 def nvl(*args) -> Any :
@@ -29,6 +24,25 @@ def nvl(*args) -> Any :
         retval = None
 
     return retval
+
+class NoneDict :
+    def __init__(self, config : dict) :
+        self.config = config
+
+    def __getitem__(self, key) -> Any :
+        keys = key.split('.')
+        value = self.config
+        for k in keys :
+            if k in value :
+                value = value[k]
+            else :
+                return None
+            if not isinstance(value, dict) :
+                return value
+        return value
+
+    def __contains__(self, key) :
+        return key in self.config
 
 GEOMETRY_PATTERN = re.compile(r'(\d+)x(\d+)')
 @dataclass
@@ -78,120 +92,159 @@ class position :
         
         return cls(w, h)
 
-def _build_default_config() -> Any :
-    return {
-        'gutter' : GUTTER_SIZE,
-        'font'   : None,
-        'output' : { 'path' : None, 'size' : geometry(IMAGE_WIDTH, IMAGE_HEIGHT), 'color' : '#000000' },
-        'cover'  : { 'path' : None, 'align' : 'min', 'crop' : 'min', 
-                    'fit' : 'square', 'color' : None },
-        'logo'   : { 'path' : None, 'size' : LOGO_SIZE, 'mask' : 'black', 
-                    'position' : 'right-bottom' },
-        'title'  : { 'text' : None, 'size' : TITLE_FONT_SIZE, 
-                    'font' : TITLE_FONT, 'position' : 'right-top',
-                    'fill' : '#ffffff',
-                    'stroke' : { 'color' : '#ffffff', 'width' : 0 }
-                },
-    }
+class Settings :
+    def override(self, key : str, new_value : Any) :
+        """Update the value of the attribute if the NEW value is NOT None."""
+        #print(f"--- override ??? : {key} ??? {new_value}")
+        if (new_value is not None and not (isinstance(new_value, str) and new_value.strip() == '')) :
+            #print(f"--- override !!! : set {key} to {new_value}")
+            setattr(self, key, new_value)
 
-def _add_supplied_config(config : Any, supplied_config : Any) :
-    if 'gutter' in supplied_config :
-        config['gutter'] = int(supplied_config['gutter'])
+    def default(self, key : str, new_value : Any) :
+        """Update the value of the attribute if the OLD value is None."""
+        old_value = getattr(self, key)
+        if old_value is None or (isinstance(old_value, str) and old_value.strip() == '') :
+            setattr(self, key, new_value)
 
-    if 'font' in supplied_config :
-        config['font'] = supplied_config['font']
+class PathSetting(Settings) :
+    def path_valid(self) -> bool :
+        path = getattr(self, 'path')
+        return path is not None and path != ''
 
-    if 'output' in supplied_config :
-        c = supplied_config['output']
-        if 'path' in c :
-            config['output']['path'] = c['path']
-        if 'size' in c :
-            config['output']['size'] = geometry.from_string(c['size'])
-        if 'color' in c :
-            config['output']['color'] = c['color']
+@dataclass
+class GlobalSettings(Settings) :
+    gutter : int
+    font : str | None
 
-    if 'cover' in supplied_config :
-        c = supplied_config['cover']
-        if 'path' in c :
-            config['cover']['path'] = c['path']
-        if 'align' in c :
-            config['cover']['align'] = c['align']
-        if 'crop' in c :
-            config['cover']['crop'] = c['crop']
-        if 'fit' in c :
-            config['cover']['fit'] = c['fit']
+@dataclass
+class OutputSettings(PathSetting) :
+    path : str
+    size : geometry
+    color : str
 
-    if 'logo' in supplied_config :
-        c = supplied_config['logo']
-        if 'path' in c :
-            config['logo']['path'] = c['path']
-        if 'size' in c :
-            config['logo']['size'] = int(c['size'])
-        if 'mask' in c :
-            config['logo']['mask'] = c['mask']
-        if 'position' in c :
-            config['logo']['position'] = c['position']
+@dataclass
+class CoverSettings(PathSetting) :
+    path : str
+    align : str
+    crop : str
+    fit : str
+    color : str | None
 
-    if 'title' in supplied_config :
-        c = supplied_config['title']
-        if 'text' in c :
-            config['title']['text'] = c['text']
-        if 'size' in c :
-            config['title']['size'] = int(c['size'])
-        if 'font' in c :
-            config['title']['font'] = c['font']
-        if 'position' in c :
-            config['title']['position'] = c['position']
-        if 'fill' in c :
-            config['title']['fill'] = c['fill']
-        if 'stroke' in c :
-            c = c['stroke']
-            if 'color' in c :
-                config['title']['stroke']['color'] = c['color']
-            if 'width' in c :
-                config['title']['stroke']['width'] = int(c['width'])
+@dataclass
+class LogoSettings(PathSetting) :
+    path : str
+    size : int
+    mask : str
+    position : position | None
 
+@ dataclass
+class StrokeSettings(Settings) :
+    color : str
+    width : int
+
+    def exists(self) -> bool :
+        return self.width > 0
+
+@dataclass 
+class TextSettings(Settings) :
+    text : str | None
+    size : int
+    font : str | None
+    position : position | None
+    fill : str
+    stroke : StrokeSettings
+
+    def has_text(self) -> bool :
+        return self.text is not None
+
+@dataclass
+class Config(Settings) :
+    globals : GlobalSettings
+    output  : OutputSettings
+    cover   : CoverSettings
+    logo    : LogoSettings
+    title   : TextSettings
+
+def _build_default_config() -> Config :
+
+    return Config(
+        globals = GlobalSettings(GUTTER_SIZE, None),
+        output  = OutputSettings("", geometry(IMAGE_WIDTH, IMAGE_HEIGHT), '#000000'),
+        cover   = CoverSettings('', 'min', 'min', 'square', None),
+        logo    = LogoSettings('', LOGO_SIZE, 'black', position.from_string('right-bottom')),
+        title   = TextSettings(None, TITLE_FONT_SIZE, None, 
+                                position.from_string('right-top'), 
+                                '#ffffff', 
+                                StrokeSettings('#ffffff', 0)),
+    )
+
+def _add_supplied_config(config : Config, new_cfg : NoneDict) :
+    config.globals.override('gutter', new_cfg['gutter'])
+    config.globals.override('font', new_cfg['font'])
+
+    config.output.override('path', new_cfg['output.path'])
+    config.output.override('size', geometry.from_string(new_cfg['output.size']))
+    config.output.override('color', new_cfg['output.color'])
+
+    config.cover.override('path', new_cfg['cover.path'])
+    config.cover.override('align', new_cfg['cover.align'])
+    config.cover.override('crop', new_cfg['cover.crop'])
+    config.cover.override('fit', new_cfg['cover.fit'])
+
+    config.logo.override('path', new_cfg['logo.path'])
+    config.logo.override('size', new_cfg['logo.size'])
+    config.logo.override('mask', new_cfg['logo.mask'])
+    config.logo.override('position', position.from_string(new_cfg['logo.position']))
+
+    config.title.override('text', new_cfg['title.text'])
+    config.title.override('size', new_cfg['title.size'])
+    config.title.override('font', new_cfg['title.font'])
+    config.title.override('position', position.from_string(new_cfg['title.position']))
+    config.title.override('fill', new_cfg['title.fill'])
+    config.title.stroke.override('color', new_cfg['title.stroke.color'])
+    config.title.stroke.override('width', new_cfg['title.stroke.width'])
 
     return config
 
-def _add_args(config : Any, args : argparse.Namespace) :
-    config['gutter'] = nvl(args.gutter, config['gutter'])
-    config['font'] = nvl(args.font, config['font'])
+def _add_args(config : Config, args : argparse.Namespace) :
+    config.globals.override('gutter', args.gutter)
+    config.globals.override('font', args.font)
 
-    config['output']['path'] = nvl(args.output_path, config['output']['path'])
-    config['output']['size'] = nvl(geometry.from_string(args.output_size), 
-                                   config['output']['size'])
-    config['output']['color'] = nvl(args.output_color, config['output']['color'])
+    config.output.override('path', args.output_path)
+    config.output.override('size', geometry.from_string(args.output_size))
+    config.output.override('color', args.output_color)
 
-    config['cover']['path'] = nvl(args.cover_path, config['cover']['path'])
-    config['cover']['align'] = nvl(args.cover_align, config['cover']['align'])
-    config['cover']['crop'] = nvl(args.cover_crop, config['cover']['crop'])
-    config['cover']['fit'] = nvl(args.cover_fit, config['cover']['fit'])
+    config.cover.override('path', args.cover_path)
+    config.cover.override('align', args.cover_align)
+    config.cover.override('crop', args.cover_crop)
+    config.cover.override('fit', args.cover_fit)
 
-    config['logo']['path'] = nvl(args.logo, config['logo']['path'])
-    config['logo']['size'] = nvl(args.logo_size, config['logo']['size'])
-    config['logo']['mask'] = nvl(args.logo_mask, config['logo']['mask'])
-    config['logo']['position'] = position.from_string(
-        nvl(args.logo_position, config['logo']['position']))
+    config.logo.override('path', args.logo)
+    config.logo.override('size', args.logo_size)
+    config.logo.override('mask', args.logo_mask)
+    config.logo.override('position', position.from_string(args.logo_position))
     
-    config['title']['text'] = nvl(args.title, config['title']['text'])
-    config['title']['size'] = nvl(args.title_size, config['title']['size'])
-    config['title']['font'] = nvl(args.title_font, config['title']['font'])
-    config['title']['position'] = position.from_string(
-        nvl(args.title_position, config['title']['position']))
-    config['title']['fill'] = nvl(args.title_fill, config['title']['fill'])
-    config['title']['stroke']['color'] = nvl(args.title_stroke_color,
-                                            config['title']['stroke']['color'])
-    config['title']['stroke']['width'] = nvl(args.title_stroke_width,
-                                            config['title']['stroke']['width'])
+    config.title.override('text', args.title)
+    config.title.override('size', args.title_size)
+    config.title.override('font', args.title_font)
+    config.title.override('position', position.from_string(args.title_position))
+    config.title.override('fill', args.title_fill)
+    config.title.stroke.override('color', args.title_stroke_color)
+    config.title.stroke.override('width', args.title_stroke_width)
 
     return config
 
 def _get_default_font() :
-    import sys
-    return 'Arial' if sys.platform == 'darwin' else 'Liberation Sans'
+    #import sys
+    import platform
+    #print(f"==== sys.platform: {sys.platform}")
+    #print(f"==== platform: {platform.platform()}")
+    if 'WSL2' in platform.platform():
+        return '/mnt/c/Windows/Fonts/arial.ttf'
+    else:
+        return 'Arial'
 
-def build_config(args : argparse.Namespace) -> Any:
+def build_config(args : argparse.Namespace) -> Config:
 
     retval = _build_default_config()
 
@@ -199,65 +252,71 @@ def build_config(args : argparse.Namespace) -> Any:
         with open(args.config_file, "r") as f:
             supplied_config = yaml.safe_load(f)
 
-        retval = _add_supplied_config(retval, supplied_config)
+        retval = _add_supplied_config(retval, NoneDict(supplied_config))
 
     retval = _add_args(retval, args)
 
-    # some helpers. Makes the code a littler cleaner.
+    # HELPER
+    # Makes the code a littler cleaner. cover color is not
+    # actually settable by the user.
     # Make sure we inherit the output color
-    # even if overriden in the args.
-    retval['cover']['color'] = retval['output']['color']
+    # even if overridden in the args.
+    retval.cover.color = retval.output.color
 
     # set a default font that depends on the platform
-    if retval['font'] is None:
-        retval['font'] = _get_default_font()
+    retval.globals.default('font', _get_default_font())
 
-    #update the other fonts to use this if needed.
-    if retval['title']['font'] is None:
-        retval['title']['font'] = retval['font']
+    # update the other fonts to use this if needed.
+    retval.title.default('font', retval.globals.font) 
 
     print("++ Using configuration:")
-    pprint.pp(retval)
-    print("\n")
+    # pprint.pp(retval)
+    # print("\n")
+    dump = yaml.dump(retval, default_flow_style=False, sort_keys=False)
+    dump = re.sub(r'\s?!![^\n]*\n', '\n', dump)
+    print(dump)
 
 
     return retval
 
-def validate_config(config : Any) -> bool :
-    if config['output']['path'] is None:
+def validate_config(config : Config) -> bool :
+    if not config.output.path_valid():
         print("No output path specified")
         return False
     else :
-        dirname = os.path.dirname(config['output']['path'])
+        output_path = config.output.path
+        dirname = os.path.dirname(output_path)
         if dirname != "" and not os.path.exists(dirname) :
             print(f"The directory {dirname} does not exist.")
             return False
-        ext = os.path.splitext(config['output']['path'])[1]
-        if ext not in ('.png', '.jpeg', '.jpg'):
+        ext = (os.path.splitext(output_path)[1]).lower()
+        if ext not in ('.png', '.jpeg', '.jpg', 'webp'):
             print(f"Unsupported output file type: {ext}")
             return False
     
-    if config['output']['size'].is_square() :
+    if config.output.size.is_square() :
         print("Square output is currently not supported")
         return False
     
-    width, height = config['output']['size'].to_tuple()
+    width, height = config.output.size.to_tuple()
     if width < 1 or height < 1:
         print("Invalid output size")
         return False
 
-    if config['cover']['path'] is not None:
-        if not os.path.isfile(config['cover']['path']):
-            print(f"The cover image file {config['cover']['path']} does not exist.")
+    if config.cover.path_valid():
+        cover_path = config.cover.path
+        if not os.path.isfile(cover_path):
+            print(f"The cover image file {cover_path} does not exist.")
             return False
 
-    if config['logo']['path'] is not None:
-        if not os.path.isfile(config['logo']['path']):
-            print(f"The logo image file {config['logo']['path']} does not exist.")
+    if config.logo.path_valid():
+        logo_path = config.logo.path
+        if not os.path.isfile(logo_path):
+            print(f"The logo image file {logo_path} does not exist.")
             return False
 
-    if config['title']['text'] is not None:
-        if config['title']['stroke']['width'] < 0:
+    if config.title.has_text():
+        if config.title.stroke.width < 0:
             print("Title stroke width must be >= 0")
             return False
 

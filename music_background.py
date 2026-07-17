@@ -8,9 +8,8 @@ from PIL import ImageDraw
 from PIL import ImageFont
 
 import sys
-import os
 
-from lib.configuration import build_config, geometry, validate_config, position
+from lib.configuration import Config, build_config, geometry, validate_config, position
 
 
 def _get_text_size(text : str, font : ImageFont.FreeTypeFont) -> geometry:
@@ -43,16 +42,16 @@ def _position_to_offset(pos : position, img_size : geometry, elem_size : geometr
 #--------------------------------------------------------------------------------
 
 def _build_logo(config : Any) -> Tuple[Image.Image, Image.Image | None] | None :
-    logo_config = config.get('logo', None)
-    if logo_config is None :
-        return None
+    logo_config = config.logo
 
-    logo_path : str = logo_config['path']
+    logo_path : str = logo_config.path
+    if logo_path is None :
+        return None
 
     with Image.open(logo_path) as logo_img:
 
         logo_width, logo_height = logo_img.size
-        needed_size : int = logo_config['size']
+        needed_size : int = logo_config.size
 
         if logo_width > logo_height:
             # Landscape
@@ -65,9 +64,9 @@ def _build_logo(config : Any) -> Tuple[Image.Image, Image.Image | None] | None :
 
         gray_img = logo_img.convert('L')
 
-        if logo_config['mask'] == 'self':
+        if logo_config.mask == 'self':
             pass
-        elif logo_config['mask'] == 'black':
+        elif logo_config.mask == 'black':
             gray_img = gray_img.point(lambda x : 0 if x < 10 else 255) # type: ignore
         else :
             gray_img = None
@@ -83,10 +82,10 @@ def _add_logo(config : Any, output_img : Image.Image) -> None :
     print("++ Adding logo")
     logo_img, mask_img = logo_img
     logo_width, logo_height = logo_img.size
-    output_size = config['output']['size']
-    position = config['logo']['position']
+    output_size = config.output.size
+    position = config.logo.position
 
-    offsets = _position_to_offset(position, output_size, geometry(logo_width, logo_height), config['gutter'])
+    offsets = _position_to_offset(position, output_size, geometry(logo_width, logo_height), config.globals.gutter)
 
     # Paste the logo
     if mask_img is not None:
@@ -99,14 +98,14 @@ def _add_logo(config : Any, output_img : Image.Image) -> None :
 #--------------------------------------------------------------------------------
 
 def _landscape_cover_square(config : Any) -> Image.Image :
-    cover_cfg = config['cover']
+    cover_cfg = config.cover
 
-    required_size = config['output']['size']
+    required_size = config.output.size
     cover_side = required_size.height
-    crop = cover_cfg['crop']
-    bg_color = cover_cfg['color']
+    crop = cover_cfg.crop
+    bg_color = cover_cfg.color
 
-    cover_img = Image.open(cover_cfg['path'])
+    cover_img = Image.open(cover_cfg.path)
     original_width, original_height = cover_img.size
     aspect_ratio = original_width / original_height
 
@@ -145,14 +144,14 @@ def _landscape_cover_square(config : Any) -> Image.Image :
     return cover_img
 
 def _portrait_cover_square(config :Any) -> Image.Image :
-    cover_cfg = config['cover']
+    cover_cfg = config.cover
 
-    required_size = config['output']['size']
+    required_size = config.output.size
     cover_side = required_size.width
-    crop = cover_cfg['crop']
-    bg_color = cover_cfg['color']
+    crop = cover_cfg.crop
+    bg_color = cover_cfg.color
 
-    cover_img = Image.open(cover_cfg['path'])
+    cover_img = Image.open(cover_cfg.path)
 
 
     original_width, original_height = cover_img.size
@@ -194,11 +193,12 @@ def _portrait_cover_square(config :Any) -> Image.Image :
     return cover_img
 
 def _landscape_cover_fit(config : Any) -> Image.Image:
-    cover_cfg = config['cover']
+    cover_cfg = config.cover
 
-    required_size = config['output']['size']
+    required_size = config.output.size
+    crop = cover_cfg.crop
 
-    cover_img = Image.open(cover_cfg['path'])
+    cover_img = Image.open(cover_cfg.path)
 
     orig_width, orig_height = cover_img.size
     aspect_ratio = orig_width / orig_height
@@ -212,21 +212,21 @@ def _landscape_cover_fit(config : Any) -> Image.Image:
     
     cover_img = cover_img.resize((new_width, new_height))
     if new_height > required_size.height:
-        if cover_cfg['crop'] == 'min':
+        if crop == 'min':
            height_offset = 0
-        elif cover_cfg['crop'] == 'mid':
+        elif crop == 'mid':
             height_offset = (new_height - required_size.height) // 2
-        elif cover_cfg['crop'] == 'max':
+        elif crop == 'max':
             height_offset = new_height - required_size.height
     else :
         height_offset = 0
 
     if new_width > required_size.width:
-        if cover_cfg['crop'] == 'min':
+        if crop == 'min':
             width_offset = 0
-        elif cover_cfg['crop'] == 'mid':
+        elif crop == 'mid':
             width_offset = (new_width - required_size.width) // 2
-        elif cover_cfg['crop'] == 'max':
+        elif crop == 'max':
             width_offset = new_width - required_size.width
     else :
         width_offset = 0
@@ -239,11 +239,12 @@ def _landscape_cover_fit(config : Any) -> Image.Image:
     return cover_img
 
 def _portrait_cover_fit(config : Any) -> Image.Image:
-    cover_cfg = config['cover']
+    cover_cfg = config.cover
 
-    required_size = config['output']['size']
+    required_size = config.output.size
+    crop = cover_cfg.crop
 
-    cover_img = Image.open(cover_cfg['path'])
+    cover_img = Image.open(cover_cfg.path)
 
     orig_width, orig_height = cover_img.size
     aspect_ratio = orig_height / orig_width
@@ -257,21 +258,21 @@ def _portrait_cover_fit(config : Any) -> Image.Image:
     
     cover_img = cover_img.resize((new_width, new_height))
     if new_width > required_size.width:
-        if cover_cfg['crop'] == 'min':
+        if crop == 'min':
            width_offset = 0
-        elif cover_cfg['crop'] == 'mid':
+        elif crop == 'mid':
             width_offset = (new_width - required_size.width) // 2
-        elif cover_cfg['crop'] == 'max':
+        elif crop == 'max':
             width_offset = new_width - required_size.width
     else :
         width_offset = 0
 
     if new_height > required_size.height:
-        if cover_cfg['crop'] == 'min':
+        if crop == 'min':
             height_offset = 0
-        elif cover_cfg['crop'] == 'mid':
+        elif crop == 'mid':
             height_offset = (new_height - required_size.height) // 2
-        elif cover_cfg['crop'] == 'max':
+        elif crop == 'max':
             height_offset = new_height - required_size.height
     else :
         height_offset = 0
@@ -285,37 +286,37 @@ def _portrait_cover_fit(config : Any) -> Image.Image:
 
 def _add_cover(config : Any, output_img : Image.Image) -> None :
 
-    cover_cfg = config['cover']
+    cover_cfg = config.cover
 
-    output_size = config['output']['size']
+    output_size = config.output.size
 
     print("++ Adding cover")
 
     if output_size.is_landscape():
-        if cover_cfg['fit'] == 'cover':
+        if cover_cfg.fit == 'cover':
             cover_img = _landscape_cover_fit(config)
         else :
             cover_img = _landscape_cover_square(config)
     else:
-        if cover_cfg['fit'] == 'cover':
+        if cover_cfg.fit == 'cover':
             cover_img = _portrait_cover_fit(config)
         else :
             cover_img = _portrait_cover_square(config)
 
-    if config['cover']['align'] == 'min':
+    if cover_cfg.align == 'min':
         position = (0,0)
-    elif config['cover']['align'] == 'mid':
+    elif cover_cfg.align == 'mid':
         if output_size.is_landscape():
             position = ((output_size.width - cover_img.width) // 2, 0)
         else:
             position = (0, (output_size.height - cover_img.height) // 2)
-    elif config['cover']['align'] == 'max':
+    elif cover_cfg.align == 'max':
         if output_size.is_landscape():
             position = (output_size.width - cover_img.width, 0)
         else:
             position = (0, output_size.height - cover_img.height)
     else:
-        raise Exception(f"Invalid cover alignment: {config['cover']['align']}")
+        raise Exception(f"Invalid cover alignment: {cover_cfg.align}")
 
     # Paste the cover
     output_img.paste(cover_img, position)
@@ -325,52 +326,53 @@ def _add_cover(config : Any, output_img : Image.Image) -> None :
 #--------------------------------------------------------------------------------
 
 def _add_title(config : Any, output_img : Image.Image) -> None :
-    title_cfg = config['title']
+    title_cfg = config.title
 
-    if title_cfg is None or title_cfg['text'] is None:
+    if not title_cfg.has_text():
         print("++ Skipping title")
         return
     
     print("++ Adding title")
 
-    output_size = config['output']['size']
+    output_size = config.output.size
 
     draw = ImageDraw.Draw(output_img)
-    title_font = ImageFont.truetype(title_cfg['font'], title_cfg['size'])
-    text_size = _get_text_size(title_cfg['text'], title_font)
+    title_font = ImageFont.truetype(title_cfg.font, title_cfg.size)
+    text_size = _get_text_size(title_cfg.text, title_font)
 
+    gutter = config.globals.gutter
 
     if output_size.is_landscape():
-        max_text_width = output_size.width - output_size.height - (config['gutter'] * 2)
+        max_text_width = output_size.width - output_size.height - (gutter * 2)
     else:
-        max_text_width = output_size.width - (config['gutter'] * 2)
+        max_text_width = output_size.width - (gutter * 2)
     if (text_size.width > max_text_width):
         # The text is too long, so we need to scale it down
-        new_size = title_cfg['size'] * (max_text_width / text_size.width)
-        title_font = ImageFont.truetype(title_cfg['font'], new_size)
-        text_size = _get_text_size(title_cfg['text'], title_font)
+        new_size = title_cfg.size * (max_text_width / text_size.width)
+        title_font = ImageFont.truetype(title_cfg.font, new_size)
+        text_size = _get_text_size(title_cfg.text, title_font)
 
-    offsets = _position_to_offset(title_cfg['position'], output_size, text_size, config['gutter'])
+    offsets = _position_to_offset(title_cfg.position, output_size, text_size, gutter)
 
-    if title_cfg['stroke']['width'] > 0:
-        stroke_params = { 'stroke_fill' : title_cfg['stroke']['color'],
-                          'stroke_width' : title_cfg['stroke']['width'] }
+    if title_cfg.stroke.exists():
+        stroke_params = { 'stroke_fill' : title_cfg.stroke.color,
+                          'stroke_width' : title_cfg.stroke.width }
     else :
         stroke_params = {}
 
-    draw.text(offsets, title_cfg['text'], font=title_font, fill=title_cfg['fill'], **stroke_params)
+    draw.text(offsets, title_cfg.text, font=title_font, fill=title_cfg.fill, **stroke_params)
 
 #--------------------------------------------------------------------------------
 # TOP LEVEL FUNCTION
 #--------------------------------------------------------------------------------
 
-def build_image(config : Any) :
+def build_image(config : Config) :
     # Open the image
-    output_path = config['output']['path']
-    output_size = config['output']['size']
+    output_path = config.output.path
+    output_size = config.output.size
 
     print("++ Creating background")
-    output_img = Image.new("RGB", output_size.to_tuple(), color=config['output']['color'])
+    output_img = Image.new("RGB", output_size.to_tuple(), color=config.output.color)
 
 
     _add_cover(config, output_img)
