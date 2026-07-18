@@ -121,13 +121,15 @@ logo :
   size : 200 # size in pixels --logo_size
 
   # Algorithm to compute a mask for the logo image.
-  # "self" uses the luminance channel of the image as-is. This means that
-  # the background will show through at least a little on any part of
-  # the logo image that is not fully white.
-  # "black" clamps the luminance channel, so that only black pixels in the logo 
-  # are transparent. 'black' is the default.
-  # 'none' : No masking is done. However, the alpha channel on the logo will be used.
-  mask : black # --logo_mask
+  # "self" - uses the luminance channel of the image as-is. This means that
+  #     the background will show through at least a little on any part of
+  #     the logo image that is not fully white.
+  # "black" - clamps the luminance channel, so that only black pixels in the logo 
+  #     are transparent.
+  # "alpha" - uses the alpha channel of the image as a mask.
+  # "auto" - automatically chooses between "alpha" and "black". This is the default.
+  # "none" : No masking is done.
+  mask : auto # --logo_mask
 
   # Position for the logo on the output.
   # See above for details

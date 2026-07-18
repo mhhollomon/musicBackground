@@ -313,6 +313,12 @@ def validate_config(config : Config) -> bool :
         if not os.path.isfile(logo_path):
             print(f"The logo image file {logo_path} does not exist.")
             return False
+        if config.logo.size < 0:
+            print("Logo size must be >= 0")
+            return False
+        if config.logo.mask not in ('self', 'black', 'alpha', 'auto', 'none'):
+            print("Invalid logo mask value")
+            return False
 
     if config.title.has_text():
         if config.title.stroke.width < 0:

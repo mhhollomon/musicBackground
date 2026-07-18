@@ -27,6 +27,36 @@ def _get_text_size(text : str, font : ImageFont.FreeTypeFont) -> geometry:
 # LOGO
 #--------------------------------------------------------------------------------
 
+def _compute_mask(img : Image.Image, mask : str, luminance_img : Image.Image | None = None) -> Image.Image | None :
+    
+    if luminance_img is None:
+        luminance_img = img.convert('L')
+
+    if mask == 'self':
+        # use the luminance of the image as-is
+        gray_img = luminance_img
+
+    elif mask == 'black':
+        # clamp the luminance to black
+        gray_img = luminance_img.point(lambda x : 0 if x < 10 else 255) # type: ignore
+
+    elif mask == 'none' :
+        # no mask
+        gray_img = None
+
+    elif mask == 'alpha' :
+        # use the alpha channel
+        gray_img = img
+
+    else : # auto
+        # use alpha if it is there otherwise use black
+        if 'A' in img.mode or 'a' in img.mode:
+            gray_img = img
+        else:
+            gray_img = _compute_mask(img, 'black', luminance_img)
+
+    return gray_img
+
 def _build_logo(config : Any) -> Tuple[Image.Image, Image.Image | None] | None :
     logo_config = config.logo
 
@@ -48,16 +78,8 @@ def _build_logo(config : Any) -> Tuple[Image.Image, Image.Image | None] | None :
 
         logo_img = logo_img.resize(new_size)
 
-        gray_img = logo_img.convert('L')
+        gray_img = _compute_mask(logo_img, logo_config.mask)
 
-        if logo_config.mask == 'self':
-            pass
-        elif logo_config.mask == 'black':
-            gray_img = gray_img.point(lambda x : 0 if x < 10 else 255) # type: ignore
-        elif 'A' in logo_img.mode or 'a' in logo_img.mode :
-            gray_img = logo_img
-        else :
-            gray_img = None
 
         return (logo_img, gray_img)
     
