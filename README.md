@@ -2,9 +2,9 @@
 Generate an image to use as the background for a static image music video.
 A logo, title, and cover image can be added.
 
-This tool is agressively CLI based. There is no GUI, there will not be a GUI.
+This tool is CLI based. There is no GUI.
 
-This is known to work on linux/macOS, and WSL2. Probably works in pure windows,
+It is known to work on linux/macOS, and WSL2. Probably works in pure windows,
 but haven't tried it.
 
 # Install

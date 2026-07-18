@@ -8,6 +8,7 @@
 # 2. The cover image
 # 3. The logo
 # 4. The title text
+# 5. The album text
 
 # COLORS
 # You can use the following formats for colors:
@@ -16,6 +17,29 @@
 #    RGB function "rgb(r,g,b)" or percentages "rgb(r%,g%,b%)"
 #    HSL function "hsl(h,s,l)" or percentages "hsl(h,s%,l%)" 
 #    HSV function "hsv(h,s,v)" or percentages "hsv(h,s%,v%)"
+
+# ---------------------------------
+# POSITIONS
+# ---------------------------------
+# You can use the following formats for positions:
+# Simple : Width-Height
+#    Width is one of 'left', 'center', 'right'
+#    Height is one of 'top', 'center', 'bottom'
+#    The title will be placed using the `gutter` parameter as a standoff
+#    from the edge of the output image.
+# Function :
+#   The name of the function is the element that is used as a reference.
+#   The following functions are available:
+#     output(w, h)
+#     cover(w, h)
+#     border(w, h, side)
+#   both 'w' and 'h' are one of 'min', 'mid', or 'max'
+#   'side' is one of 'left', 'right', 'top', 'bottom'
+#   The element will be placed using the `gutter` parameter as a standoff
+#   from the edge of the reference.
+#
+#   'output(max, max)' is the equivalent of `right-bottom`
+
 
 #---------------------------------
 # Global Configuration
@@ -79,7 +103,7 @@ cover :
   crop : mid # --cover_crop
 
   # border for the cover image
-  # If the width is zero, then no border will be drawn
+  # If the width is zero, then no border will be drawn. This is the default.
   border :
     color : "rgb(0,0,0)" # --cover_border_color
     width : 0 # --cover_border_width
@@ -102,15 +126,12 @@ logo :
   # the logo image that is not fully white.
   # "black" clamps the luminance channel, so that only black pixels in the logo 
   # are transparent. 'black' is the default.
-  # 'none' : No masking is done.
+  # 'none' : No masking is done. However, the alpha channel on the logo will be used.
   mask : black # --logo_mask
 
   # Position for the logo on the output.
-  # In the format Width-Height
-  # Width is one of 'left', 'center', 'right'
-  # Height is one of 'top', 'center', 'bottom'
-  # The logo will be placed using the `gutter` parameter as a standoff
-  # from the edge of the output image.
+  # See above for details
+  # right-bottom is the default
   position : right-bottom # --logo_position
 
 #---------------------------------
@@ -128,11 +149,8 @@ title :
   font : 'DejaVuSans.ttf' # --title_font
 
   # Position for the title on the output.
-  # In the format Width-Height
-  # Width is one of 'left', 'center', 'right'
-  # Height is one of 'top', 'center', 'bottom'
-  # The title will be placed using the `gutter` parameter as a standoff
-  # from the edge of the output image.
+  # See above for details
+  # right-top is the default
   position : right-top # --title_position
 
   # Fill color for the title
@@ -148,4 +166,35 @@ title :
     color : "hsv(0,0%,100%)" # --title_stroke_color
     width : 2 # --title_stroke_width
 
+#---------------------------------
+# Album Title Configuration
+#---------------------------------
+album :
+  text : "This is the album name" # --album
+
+  # Size of the text in pixels (not points)
+  # This size is a maximum. If the text does not fit, it will be scaled down.
+  size : 200 # --size_size
+
+  # Font to use for the text.
+  # defaults to the global font setting if not given (see above).
+  font : 'DejaVuSans.ttf' # --album_font
+
+  # Position for the text on the output.
+  # See above for details
+  # right-center is the default
+  position : right-center # --album_position
+
+  # Fill color for the text
+  # see above for color formats.
+  # White is the default
+  fill : "hsv(0,0%,100%)" # --album_fill
+
+  # Control the stroke.
+  # See above for color formats.
+  # If width is 0, no stroke is drawn (the default).
+  # Default stroke color is white.
+  stroke :
+    color : "hsv(0,0%,100%)" # --album_stroke_color
+    width : 2 # --album_stroke_width
 
