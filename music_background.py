@@ -9,7 +9,11 @@ from PIL import ImageFont
 
 import sys
 
-from lib.configuration import Config, TextSettings, build_config, geometry, validate_config, position
+from lib.configuration import Config, TextSettings, build_config, geometry, validate_config
+from lib.position import rectangle
+
+COVER_RECT = rectangle(geometry(0,0), geometry(0,0))
+
 
 
 def _get_text_size(text : str, font : ImageFont.FreeTypeFont) -> geometry:
@@ -69,9 +73,12 @@ def _add_logo(config : Any, output_img : Image.Image) -> None :
     output_size = config.output.size
     position = config.logo.position
 
-    offsets = position.offsets(output_size, 
-                               geometry(logo_width, logo_height), 
-                               config.globals.gutter)
+    offsets = position.offsets(        
+        output_rect=rectangle(geometry(0,0), output_size),
+        cover_rect=COVER_RECT,
+        border_rect=rectangle(geometry(0,0), output_size),
+        elem_size=geometry(logo_width, logo_height), 
+        gutter=config.globals.gutter)
 
     # Paste the logo
     output_img.paste(logo_img, offsets, mask=mask_img)
@@ -288,12 +295,14 @@ def _add_cover(config : Any, output_img : Image.Image) -> None :
 
     cover_width, cover_height = cover_img.size
 
+    border_size = 0
+
     if cover_cfg.border.exists() :
-        border_width = cover_cfg.border.width
+        border_size = cover_cfg.border.width
         border_color = cover_cfg.border.color
         border_img = Image.new("RGB", (cover_width, cover_height), border_color)
-        cover_img = cover_img.resize((cover_width - border_width * 2, cover_height - border_width * 2))
-        border_img.paste(cover_img, (border_width, border_width))
+        cover_img = cover_img.resize((cover_width - border_size * 2, cover_height - border_size * 2))
+        border_img.paste(cover_img, (border_size, border_size))
         cover_img = border_img
 
     if cover_cfg.align == 'min':
@@ -313,6 +322,11 @@ def _add_cover(config : Any, output_img : Image.Image) -> None :
 
     # Paste the cover
     output_img.paste(cover_img, position)
+
+    global COVER_RECT
+
+    COVER_RECT = rectangle(geometry(position[0] + border_size, position[1] + border_size), 
+                           geometry(cover_img.width - 2 * border_size, cover_img.height - 2 * border_size))
 
 #--------------------------------------------------------------------------------
 # TITLE
@@ -344,7 +358,12 @@ def text_to_image(config : Config, text_cfg : TextSettings, text_type : str, out
         title_font = ImageFont.truetype(text_cfg.font, new_size)
         text_size = _get_text_size(text_cfg.text, title_font)
 
-    offsets = text_cfg.position.offsets(output_size, text_size, gutter)
+    offsets = text_cfg.position.offsets(
+        output_rect=rectangle(geometry(0,0), output_size),
+        cover_rect=COVER_RECT,
+        border_rect=rectangle(geometry(0,0), output_size),
+        elem_size=text_size, 
+        gutter=gutter)
 
     if text_cfg.stroke.exists():
         stroke_params = { 'stroke_fill' : text_cfg.stroke.color,
@@ -426,7 +445,7 @@ def build_arg_parser() -> argparse.ArgumentParser:
     parser.add_argument("--logo_mask", type=str, required=False, default=None,
                         choices=['self', 'black'], 
                         help="The mask algorithm to use for the logo image. Default is 'black'.")
-    parser.add_argument("--logo_position", type=str, required=False, default=None,
+    parser.add_argument("--logo_position", type=str, required=False, default='',
                         help="The position of the logo on the output image. Must be in the format 'WIDTH-HEIGHT'.")
 
     # --- TRACK TITLE ARGUMENTS ---
@@ -436,7 +455,7 @@ def build_arg_parser() -> argparse.ArgumentParser:
                         help="The size of the title text. If not specified, the title will be scaled to 200 pixels.")
     parser.add_argument("--title_font", type=str, required=False, default=None,
                         help="The font to use for the title text. If not specified, the default font will be used.")
-    parser.add_argument("--title_position", type=str, required=False, default=None,
+    parser.add_argument("--title_position", type=str, required=False, default='',
                         help="The position of the title on the output image. Must be in the format 'WIDTH-HEIGHT'.")
     parser.add_argument("--title_fill", type=str, required=False, default=None,
                         help="The fill color for the title text.")
@@ -453,7 +472,7 @@ def build_arg_parser() -> argparse.ArgumentParser:
                         help="The size of the album text. If not specified, the album will be scaled to 200 pixels.")
     parser.add_argument("--album_font", type=str, required=False, default=None,
                         help="The font to use for the album text. If not specified, the default font will be used.")
-    parser.add_argument("--album_position", type=str, required=False, default=None,
+    parser.add_argument("--album_position", type=str, required=False, default='',
                         help="The position of the album text on the output image. Must be in the format 'WIDTH-HEIGHT'.")
     parser.add_argument("--album_fill", type=str, required=False, default=None,
                         help="The fill color for the album text.")
