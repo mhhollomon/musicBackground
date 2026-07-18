@@ -19,28 +19,6 @@ def _get_text_size(text : str, font : ImageFont.FreeTypeFont) -> geometry:
     size = geometry(int(box[2]-box[0]), int(box[3]-box[1]))
     return size
 
-def _position_to_offset(pos : position | None, img_size : geometry, elem_size : geometry, gutter : int) -> Tuple[int, int] :
-    if pos is None :
-        raise ValueError("Position is None")
-    
-    # Calculate the offset
-    if pos.w == 'left':
-        width_offset = gutter
-    elif pos.w == 'center':
-        width_offset = (img_size.width - elem_size.width) // 2
-    elif pos.w == 'right':
-        width_offset = img_size.width - elem_size.width - gutter
-
-    if pos.h == 'top':
-        height_offset = gutter
-    elif pos.h == 'center':
-        height_offset = (img_size.height - elem_size.height) // 2
-    elif pos.h == 'bottom':
-        height_offset = img_size.height - elem_size.height - gutter
-
-    #print(f"++ position = {pos}, elem_size = {elem_size}, gutter = {gutter}, Offset: {width_offset}, {height_offset}")
-    return (width_offset, height_offset)
-
 #--------------------------------------------------------------------------------
 # LOGO
 #--------------------------------------------------------------------------------
@@ -72,6 +50,8 @@ def _build_logo(config : Any) -> Tuple[Image.Image, Image.Image | None] | None :
             pass
         elif logo_config.mask == 'black':
             gray_img = gray_img.point(lambda x : 0 if x < 10 else 255) # type: ignore
+        elif 'A' in logo_img.mode or 'a' in logo_img.mode :
+            gray_img = logo_img
         else :
             gray_img = None
 
@@ -89,13 +69,12 @@ def _add_logo(config : Any, output_img : Image.Image) -> None :
     output_size = config.output.size
     position = config.logo.position
 
-    offsets = _position_to_offset(position, output_size, geometry(logo_width, logo_height), config.globals.gutter)
+    offsets = position.offsets(output_size, 
+                               geometry(logo_width, logo_height), 
+                               config.globals.gutter)
 
     # Paste the logo
-    if mask_img is not None:
-        output_img.paste(logo_img, offsets, mask=mask_img)
-    else:
-        output_img.paste(logo_img, offsets)
+    output_img.paste(logo_img, offsets, mask=mask_img)
 
 #--------------------------------------------------------------------------------
 # COVER
@@ -365,7 +344,7 @@ def text_to_image(config : Config, text_cfg : TextSettings, text_type : str, out
         title_font = ImageFont.truetype(text_cfg.font, new_size)
         text_size = _get_text_size(text_cfg.text, title_font)
 
-    offsets = _position_to_offset(text_cfg.position, output_size, text_size, gutter)
+    offsets = text_cfg.position.offsets(output_size, text_size, gutter)
 
     if text_cfg.stroke.exists():
         stroke_params = { 'stroke_fill' : text_cfg.stroke.color,

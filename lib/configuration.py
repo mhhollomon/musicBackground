@@ -5,6 +5,8 @@ from typing import Any
 from dataclasses import dataclass
 import re
 
+from .position import position, geometry
+
 # Defaults
 IMAGE_HEIGHT = 1080
 IMAGE_WIDTH = 1920
@@ -35,66 +37,36 @@ class NoneDict :
     def __contains__(self, key) :
         return key in self.config
 
-GEOMETRY_PATTERN = re.compile(r'(\d+)x(\d+)')
-@dataclass
-class geometry :
-    width : int
-    height : int
 
-    def to_tuple(self) -> tuple :
-        return (self.width, self.height)
-    
-    @classmethod
-    def from_string(cls, s : str | None) -> 'geometry | None' :
-        if s is None :
-            return None
-        
-        match = GEOMETRY_PATTERN.match(s)
-        if match is None :
-            raise ValueError(f"Invalid geometry string: {s}")
-
-        width, height = match.groups()
-        return cls(int(width), int(height))
-    
-    def is_square(self) -> bool :
-        return self.width == self.height
-    
-    def is_portrait(self) -> bool :
-        return self.width < self.height
-    
-    def is_landscape(self) -> bool :
-        return self.width > self.height
-
-@dataclass
-class position :
-    w : str
-    h : str
-
-    @classmethod
-    def from_string(cls, s : str | None) -> 'position | None' :
-        if s is None :
-            return None
-
-        w, h = s.split('-')
-        w = w.strip().lower()
-        h = h.strip().lower()
-        if w not in ('left', 'center', 'right') or h not in ('top', 'center', 'bottom') :
-            raise ValueError(f"Invalid position string: {s}")
-        
-        return cls(w, h)
 
 class Settings :
+
+    def valid_value(self, value : Any) -> bool :
+
+        if value is None :
+            return False
+        
+        if isinstance(value, str) :
+            return value.strip() != ''
+        
+        try :
+            return value.valid()
+        except AttributeError :
+            pass
+
+        return True
+    
     def override(self, key : str, new_value : Any) :
         """Update the value of the attribute if the NEW value is NOT None."""
         #print(f"--- override ??? : {key} ??? {new_value}")
-        if (new_value is not None and not (isinstance(new_value, str) and new_value.strip() == '')) :
+        if self.valid_value(new_value) :
             #print(f"--- override !!! : set {key} to {new_value}")
             setattr(self, key, new_value)
 
     def default(self, key : str, new_value : Any) :
         """Update the value of the attribute if the OLD value is None."""
         old_value = getattr(self, key)
-        if old_value is None or (isinstance(old_value, str) and old_value.strip() == '') :
+        if not self.valid_value(old_value) :
             setattr(self, key, new_value)
 
 class PathSetting(Settings) :
@@ -135,7 +107,7 @@ class LogoSettings(PathSetting) :
     path : str
     size : int
     mask : str
-    position : position | None
+    position : position
 
 @ dataclass
 class StrokeSettings(Settings) :
@@ -150,7 +122,7 @@ class TextSettings(Settings) :
     text : str
     size : int
     font : str
-    position : position | None
+    position : position
     fill : str
     stroke : StrokeSettings
 
@@ -173,13 +145,13 @@ def _build_default_config() -> Config :
         output  = OutputSettings("", geometry(IMAGE_WIDTH, IMAGE_HEIGHT), '#000000'),
         cover   = CoverSettings('', 'min', 'min', 'square', None, 
                                 BorderSettings('#000000', 0)),
-        logo    = LogoSettings('', LOGO_SIZE, 'black', position.from_string('right-bottom')),
+        logo    = LogoSettings('', LOGO_SIZE, 'black', position('right-bottom')),
         title   = TextSettings('', TITLE_FONT_SIZE, '', 
-                                position.from_string('right-top'), 
+                                position('right-top'), 
                                 '#ffffff', 
                                 StrokeSettings('#ffffff', 0)),
         album   = TextSettings('', TITLE_FONT_SIZE // 2, '', 
-                                position.from_string('right-center'), 
+                                position('right-center'), 
                                 '#ffffff', 
                                 StrokeSettings('#ffffff', 0)),
     )
@@ -202,12 +174,12 @@ def _add_supplied_config(config : Config, new_cfg : NoneDict) :
     config.logo.override('path', new_cfg['logo.path'])
     config.logo.override('size', new_cfg['logo.size'])
     config.logo.override('mask', new_cfg['logo.mask'])
-    config.logo.override('position', position.from_string(new_cfg['logo.position']))
+    config.logo.override('position', position(new_cfg['logo.position']))
 
     config.title.override('text', new_cfg['title.text'])
     config.title.override('size', new_cfg['title.size'])
     config.title.override('font', new_cfg['title.font'])
-    config.title.override('position', position.from_string(new_cfg['title.position']))
+    config.title.override('position', position(new_cfg['title.position']))
     config.title.override('fill', new_cfg['title.fill'])
     config.title.stroke.override('color', new_cfg['title.stroke.color'])
     config.title.stroke.override('width', new_cfg['title.stroke.width'])
@@ -215,7 +187,7 @@ def _add_supplied_config(config : Config, new_cfg : NoneDict) :
     config.album.override('text', new_cfg['album.text'])
     config.album.override('size', new_cfg['album.size'])
     config.album.override('font', new_cfg['album.font'])
-    config.album.override('position', position.from_string(new_cfg['album.position']))
+    config.album.override('position', position(new_cfg['album.position']))
     config.album.override('fill', new_cfg['album.fill'])
     config.album.stroke.override('color', new_cfg['album.stroke.color'])
     config.album.stroke.override('width', new_cfg['album.stroke.width'])
@@ -240,12 +212,12 @@ def _add_args(config : Config, args : argparse.Namespace) :
     config.logo.override('path', args.logo)
     config.logo.override('size', args.logo_size)
     config.logo.override('mask', args.logo_mask)
-    config.logo.override('position', position.from_string(args.logo_position))
+    config.logo.override('position', position(args.logo_position))
     
     config.title.override('text', args.title)
     config.title.override('size', args.title_size)
     config.title.override('font', args.title_font)
-    config.title.override('position', position.from_string(args.title_position))
+    config.title.override('position', position(args.title_position))
     config.title.override('fill', args.title_fill)
     config.title.stroke.override('color', args.title_stroke_color)
     config.title.stroke.override('width', args.title_stroke_width)
@@ -253,7 +225,7 @@ def _add_args(config : Config, args : argparse.Namespace) :
     config.album.override('text', args.album)
     config.album.override('size', args.album_size)
     config.album.override('font', args.album_font)
-    config.album.override('position', position.from_string(args.album_position))
+    config.album.override('position', position(args.album_position))
     config.album.override('fill', args.album_fill)
     config.album.stroke.override('color', args.album_stroke_color)
     config.album.stroke.override('width', args.album_stroke_width)
