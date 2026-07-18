@@ -78,6 +78,12 @@ cover :
   # as a cover in a landscape formatted output.
   crop : mid # --cover_crop
 
+  # border for the cover image
+  # If the width is zero, then no border will be drawn
+  border :
+    color : "rgb(0,0,0)" # --cover_border_color
+    width : 0 # --cover_border_width
+
 #---------------------------------
 # Logo Image Configuration
 #---------------------------------

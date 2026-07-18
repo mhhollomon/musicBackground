@@ -38,6 +38,7 @@ def _position_to_offset(pos : position | None, img_size : geometry, elem_size : 
     elif pos.h == 'bottom':
         height_offset = img_size.height - elem_size.height - gutter
 
+    #print(f"++ position = {pos}, elem_size = {elem_size}, gutter = {gutter}, Offset: {width_offset}, {height_offset}")
     return (width_offset, height_offset)
 
 #--------------------------------------------------------------------------------
@@ -306,6 +307,16 @@ def _add_cover(config : Any, output_img : Image.Image) -> None :
         else :
             cover_img = _portrait_cover_square(config)
 
+    cover_width, cover_height = cover_img.size
+
+    if cover_cfg.border.exists() :
+        border_width = cover_cfg.border.width
+        border_color = cover_cfg.border.color
+        border_img = Image.new("RGB", (cover_width, cover_height), border_color)
+        cover_img = cover_img.resize((cover_width - border_width * 2, cover_height - border_width * 2))
+        border_img.paste(cover_img, (border_width, border_width))
+        cover_img = border_img
+
     if cover_cfg.align == 'min':
         position = (0,0)
     elif cover_cfg.align == 'mid':
@@ -347,6 +358,7 @@ def text_to_image(config : Config, text_cfg : TextSettings, text_type : str, out
         max_text_width = output_size.width - output_size.height - (gutter * 2)
     else:
         max_text_width = output_size.width - (gutter * 2)
+
     if (text_size.width > max_text_width):
         # The text is too long, so we need to scale it down
         new_size = text_cfg.size * (max_text_width / text_size.width)
@@ -361,7 +373,7 @@ def text_to_image(config : Config, text_cfg : TextSettings, text_type : str, out
     else :
         stroke_params = {}
 
-    draw.text(offsets, text_cfg.text, font=title_font, fill=text_cfg.fill, **stroke_params)
+    draw.text(offsets, text_cfg.text, font=title_font, fill=text_cfg.fill, anchor='lt', **stroke_params)
 
 #--------------------------------------------------------------------------------
 # TOP LEVEL FUNCTION
@@ -422,6 +434,10 @@ def build_arg_parser() -> argparse.ArgumentParser:
     parser.add_argument("--cover_fit", type=str, required=False, default=None,
                         choices=['square', 'cover'], 
                         help="The fit of the cover image. Default is 'square'")
+    parser.add_argument("--cover_border_color", type=str, required=False, default=None,
+                        help="The color of the border around the cover image.")
+    parser.add_argument("--cover_border_width", type=int, required=False, default=None,
+                        help="The width of the border around the cover image.")
 
     # --- LOGO ARGUMENTS ---
     parser.add_argument("--logo", type=str, required=False, default=None,

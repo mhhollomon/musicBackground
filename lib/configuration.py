@@ -114,12 +114,21 @@ class OutputSettings(PathSetting) :
     color : str
 
 @dataclass
+class BorderSettings(Settings) :
+    color : str
+    width : int
+
+    def exists(self) -> bool :
+        return self.width > 0
+
+@dataclass
 class CoverSettings(PathSetting) :
     path : str
     align : str
     crop : str
     fit : str
-    color : str | None
+    color : str | None # This is a convenience attribute
+    border : BorderSettings
 
 @dataclass
 class LogoSettings(PathSetting) :
@@ -162,7 +171,8 @@ def _build_default_config() -> Config :
     return Config(
         globals = GlobalSettings(GUTTER_SIZE, ''),
         output  = OutputSettings("", geometry(IMAGE_WIDTH, IMAGE_HEIGHT), '#000000'),
-        cover   = CoverSettings('', 'min', 'min', 'square', None),
+        cover   = CoverSettings('', 'min', 'min', 'square', None, 
+                                BorderSettings('#000000', 0)),
         logo    = LogoSettings('', LOGO_SIZE, 'black', position.from_string('right-bottom')),
         title   = TextSettings('', TITLE_FONT_SIZE, '', 
                                 position.from_string('right-top'), 
@@ -186,6 +196,8 @@ def _add_supplied_config(config : Config, new_cfg : NoneDict) :
     config.cover.override('align', new_cfg['cover.align'])
     config.cover.override('crop', new_cfg['cover.crop'])
     config.cover.override('fit', new_cfg['cover.fit'])
+    config.cover.border.override('color', new_cfg['cover.border.color'])
+    config.cover.border.override('width', new_cfg['cover.border.width'])
 
     config.logo.override('path', new_cfg['logo.path'])
     config.logo.override('size', new_cfg['logo.size'])
@@ -222,6 +234,8 @@ def _add_args(config : Config, args : argparse.Namespace) :
     config.cover.override('align', args.cover_align)
     config.cover.override('crop', args.cover_crop)
     config.cover.override('fit', args.cover_fit)
+    config.cover.border.override('color', args.cover_border_color)
+    config.cover.border.override('width', args.cover_border_width)
 
     config.logo.override('path', args.logo)
     config.logo.override('size', args.logo_size)
@@ -337,5 +351,13 @@ def validate_config(config : Config) -> bool :
         if config.album.stroke.width < 0:
             print("Album stroke width must be >= 0")
             return False
+        
+    if config.globals.gutter < 0:
+        print("Gutter must be >= 0")
+        return False
+    
+    if config.cover.border.width < 0:
+        print("Cover border width must be >= 0")
+        return False
 
     return True
