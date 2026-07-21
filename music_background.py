@@ -1,13 +1,19 @@
 #!/usr/bin/env python
 
+import sys
+import logging
+import logging.config
+
+from lib.logconfig import LOGGING_CONFIG
+
+logger = logging.getLogger()
+
 import argparse
 from typing import Any, Tuple
 
 from PIL import Image
 from PIL import ImageDraw
 from PIL import ImageFont
-
-import sys
 
 from lib.configuration import Config, TextSettings, build_config, geometry, validate_config
 from lib.position import rectangle
@@ -86,10 +92,10 @@ def _build_logo(config : Any) -> Tuple[Image.Image, Image.Image | None] | None :
 def _add_logo(config : Any, output_img : Image.Image) -> None :
     logo_img = _build_logo(config)
     if logo_img is None:
-        print("++ Skipping logo")
+        logger.info("Skipping logo")
         return
     
-    print("++ Adding logo")
+    logger.info("Adding logo")
     logo_img, mask_img = logo_img
     logo_width, logo_height = logo_img.size
     output_size = config.output.size
@@ -302,7 +308,7 @@ def _add_cover(config : Any, output_img : Image.Image) -> None :
 
     output_size = config.output.size
 
-    print("++ Adding cover")
+    logger.info("Adding cover")
 
     if output_size.is_landscape():
         if cover_cfg.fit == 'cover':
@@ -319,26 +325,32 @@ def _add_cover(config : Any, output_img : Image.Image) -> None :
 
     border_size = 0
 
+    margin_size = cover_cfg.margin
+
     if cover_cfg.border.exists() :
         border_size = cover_cfg.border.width
         border_color = cover_cfg.border.color
-        border_img = Image.new("RGB", (cover_width, cover_height), border_color)
-        cover_img = cover_img.resize((cover_width - border_size * 2, cover_height - border_size * 2))
+        border_img = Image.new("RGB", (cover_width - margin_size * 2, cover_height - margin_size * 2), border_color)
+        cover_img = cover_img.resize(
+            (cover_width - border_size * 2 - margin_size * 2, 
+             cover_height - border_size * 2 - margin_size * 2))
+        # border_img already has the margin_size baked in so we only need
+        # to offset by the border_size.
         border_img.paste(cover_img, (border_size, border_size))
         cover_img = border_img
 
     if cover_cfg.align == 'min':
-        position = (0,0)
+        position = (0 + margin_size, 0 + margin_size)
     elif cover_cfg.align == 'mid':
         if output_size.is_landscape():
-            position = ((output_size.width - cover_img.width) // 2, 0)
+            position = (((output_size.width - cover_img.width) // 2) + margin_size, 0 + margin_size)
         else:
-            position = (0, (output_size.height - cover_img.height) // 2)
+            position = (0 + margin_size, ((output_size.height - cover_img.height) // 2) + margin_size)
     elif cover_cfg.align == 'max':
         if output_size.is_landscape():
-            position = (output_size.width - cover_img.width, 0)
+            position = (output_size.width - cover_img.width + margin_size, 0 + margin_size)
         else:
-            position = (0, output_size.height - cover_img.height)
+            position = (0 + margin_size, output_size.height - cover_img.height + margin_size)
     else:
         raise Exception(f"Invalid cover alignment: {cover_cfg.align}")
 
@@ -347,8 +359,8 @@ def _add_cover(config : Any, output_img : Image.Image) -> None :
 
     global COVER_RECT
 
-    COVER_RECT = rectangle(geometry(position[0] + border_size, position[1] + border_size), 
-                           geometry(cover_img.width - 2 * border_size, cover_img.height - 2 * border_size))
+    COVER_RECT = rectangle(geometry(position[0] + border_size + margin_size, position[1] + border_size + margin_size), 
+                           geometry(cover_img.width - 2 * border_size - 2 * margin_size, cover_img.height - 2 * border_size - 2 * margin_size))
 
 #--------------------------------------------------------------------------------
 # TITLE
@@ -356,10 +368,10 @@ def _add_cover(config : Any, output_img : Image.Image) -> None :
 
 def text_to_image(config : Config, text_cfg : TextSettings, text_type : str, output_img : Image.Image) -> None :
     if not text_cfg.has_text():
-        print(f"++ Skipping {text_type} text")
+        logger.info(f"Skipping {text_type} text")
         return
     
-    print(f"++ Adding {text_type} text")
+    logger.info(f"Adding {text_type} text")
 
     output_size = config.output.size
 
@@ -404,8 +416,15 @@ def build_image(config : Config) :
     output_path = config.output.path
     output_size = config.output.size
 
-    print("++ Creating background")
-    output_img = Image.new("RGB", output_size.to_tuple(), color=config.output.color)
+    if config.output.valid_attr('background'):
+        logger.info("Using background image")
+        output_img = Image.open(config.output.background)
+        output_img = output_img.resize(output_size.to_tuple())
+        if output_img.mode != 'RGB':
+            output_img = output_img.convert('RGB')
+    else:
+        logger.info("Creating color background")
+        output_img = Image.new("RGB", output_size.to_tuple(), color=config.output.color)
 
 
     _add_cover(config, output_img)
@@ -424,6 +443,7 @@ def build_arg_parser() -> argparse.ArgumentParser:
     # --- Application Level Arguments ---
     parser.add_argument("--config_file", "-c", type=str, required=False, default=None,
                         help="yaml file containing configuration values. Most can then be overridden on the command line.")
+    parser.add_argument("--log_level", "-l", type=str, required=False, default=None)
 
     # --- GLOBAL ARGUMENTS ---
     parser.add_argument("--gutter", type=int, required=False, default=None,
@@ -441,6 +461,8 @@ def build_arg_parser() -> argparse.ArgumentParser:
                         help="The size of the output image. Must be in the format 'WIDTHxHEIGHT'.")
     parser.add_argument("--output_color", type=str, required=False, default=None,
                         help="The background color of the output image.")
+    parser.add_argument("--output_background", type=str, required=False, default=None,
+                        help="The image that will fill the background of the output image.")
 
     # --- COVER ARGUMENTS ---
     parser.add_argument("--cover_path", type=str, required=False, default=None,
@@ -458,6 +480,8 @@ def build_arg_parser() -> argparse.ArgumentParser:
                         help="The color of the border around the cover image.")
     parser.add_argument("--cover_border_width", type=int, required=False, default=None,
                         help="The width of the border around the cover image.")
+    parser.add_argument("--cover_margin", type=int, required=False, default=None,
+                        help="The width of the clear margin around the cover image and border.")
 
     # --- LOGO ARGUMENTS ---
     parser.add_argument("--logo", type=str, required=False, default=None,
@@ -506,9 +530,37 @@ def build_arg_parser() -> argparse.ArgumentParser:
     
     return parser
 
+_LEVELS = {
+    'debug' : logging.DEBUG,
+    'info' : logging.INFO,
+    'warning' : logging.WARNING,
+    'error' : logging.ERROR,
+    'critical' : logging.CRITICAL
+}
 
 def run() :
     args = build_arg_parser().parse_args()
+
+    new_level = logging.INFO
+
+    if args.log_level is not None:
+        new_level = args.log_level.lower()
+        if new_level not in _LEVELS:
+            if new_level.isnumeric():
+                new_level = int(new_level)
+            else :
+                raise Exception(f"Invalid log level: {args.log_level}")
+        else :
+            new_level = _LEVELS[new_level]
+            
+    print(f"++ Setting log level to {new_level}")
+
+    lc= LOGGING_CONFIG
+    lc['loggers']['']['level'] = new_level
+    lc['loggers']['lib']['level'] = new_level
+    logging.config.dictConfig(lc)
+    logger.setLevel(new_level)
+
     config = build_config(args)
     if not validate_config(config):
         sys.exit(1)

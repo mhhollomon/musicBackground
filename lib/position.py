@@ -177,6 +177,6 @@ class position :
         width_offset += ref_rect.start.width
         height_offset += ref_rect.start.height
 
-        print(f"++ position = {self.pos_str}, elem_size = {elem_size}, gutter = {gutter}, Offset: {width_offset}, {height_offset}")
+        #print(f"++ position = {self.pos_str}, elem_size = {elem_size}, gutter = {gutter}, Offset: {width_offset}, {height_offset}")
         return (width_offset, height_offset)
 

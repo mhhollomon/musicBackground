@@ -7,6 +7,9 @@ import re
 
 from .position import position, geometry
 
+import logging
+logger = logging.getLogger(__name__)
+
 # Defaults
 IMAGE_HEIGHT = 1080
 IMAGE_WIDTH = 1920
@@ -56,11 +59,14 @@ class Settings :
 
         return True
     
+    def valid_attr(self, key : str) -> bool :
+        return self.valid_value(getattr(self, key))
+    
     def override(self, key : str, new_value : Any) :
         """Update the value of the attribute if the NEW value is NOT None."""
-        #print(f"--- override ??? : {key} ??? {new_value}")
+        logger.debug(f"--- override ??? : {key} ??? {new_value}")
         if self.valid_value(new_value) :
-            #print(f"--- override !!! : set {key} to {new_value}")
+            logger.debug(f"--- override !!! : set {key} to {new_value}")
             setattr(self, key, new_value)
 
     def default(self, key : str, new_value : Any) :
@@ -84,6 +90,7 @@ class OutputSettings(PathSetting) :
     path : str
     size : geometry
     color : str
+    background : str
 
 @dataclass
 class BorderSettings(Settings) :
@@ -101,6 +108,7 @@ class CoverSettings(PathSetting) :
     fit : str
     color : str | None # This is a convenience attribute
     border : BorderSettings
+    margin : int
 
 @dataclass
 class LogoSettings(PathSetting) :
@@ -142,9 +150,9 @@ def _build_default_config() -> Config :
 
     return Config(
         globals = GlobalSettings(GUTTER_SIZE, ''),
-        output  = OutputSettings("", geometry(IMAGE_WIDTH, IMAGE_HEIGHT), '#000000'),
+        output  = OutputSettings("", geometry(IMAGE_WIDTH, IMAGE_HEIGHT), '#000000', background = ''),
         cover   = CoverSettings('', 'min', 'min', 'square', None, 
-                                BorderSettings('#000000', 0)),
+                                BorderSettings('#000000', 0), margin=0),
         logo    = LogoSettings('', LOGO_SIZE, 'black', position('right-bottom')),
         title   = TextSettings('', TITLE_FONT_SIZE, '', 
                                 position('right-top'), 
@@ -163,6 +171,7 @@ def _add_supplied_config(config : Config, new_cfg : NoneDict) :
     config.output.override('path', new_cfg['output.path'])
     config.output.override('size', geometry.from_string(new_cfg['output.size']))
     config.output.override('color', new_cfg['output.color'])
+    config.output.override('background', new_cfg['output.background'])
 
     config.cover.override('path', new_cfg['cover.path'])
     config.cover.override('align', new_cfg['cover.align'])
@@ -170,6 +179,7 @@ def _add_supplied_config(config : Config, new_cfg : NoneDict) :
     config.cover.override('fit', new_cfg['cover.fit'])
     config.cover.border.override('color', new_cfg['cover.border.color'])
     config.cover.border.override('width', new_cfg['cover.border.width'])
+    config.cover.override('margin', new_cfg['cover.margin'])
 
     config.logo.override('path', new_cfg['logo.path'])
     config.logo.override('size', new_cfg['logo.size'])
@@ -201,6 +211,7 @@ def _add_args(config : Config, args : argparse.Namespace) :
     config.output.override('path', args.output_path)
     config.output.override('size', geometry.from_string(args.output_size))
     config.output.override('color', args.output_color)
+    config.output.override('background', args.output_background)
 
     config.cover.override('path', args.cover_path)
     config.cover.override('align', args.cover_align)
@@ -208,6 +219,7 @@ def _add_args(config : Config, args : argparse.Namespace) :
     config.cover.override('fit', args.cover_fit)
     config.cover.border.override('color', args.cover_border_color)
     config.cover.border.override('width', args.cover_border_width)
+    config.cover.override('margin', args.cover_margin)
 
     config.logo.override('path', args.logo)
     config.logo.override('size', args.logo_size)
@@ -269,8 +281,6 @@ def build_config(args : argparse.Namespace) -> Config:
     retval.album.default('font', retval.globals.font) 
 
     print("++ Using configuration:")
-    # pprint.pp(retval)
-    # print("\n")
     dump = yaml.dump(retval, default_flow_style=False, sort_keys=False)
     dump = re.sub(r'\s?!![^\n]*\n', '\n', dump)
     print(dump)
@@ -280,62 +290,68 @@ def build_config(args : argparse.Namespace) -> Config:
 
 def validate_config(config : Config) -> bool :
     if not config.output.path_valid():
-        print("No output path specified")
+        logger.error("No output path specified")
         return False
     else :
         output_path = config.output.path
         dirname = os.path.dirname(output_path)
         if dirname != "" and not os.path.exists(dirname) :
-            print(f"The directory {dirname} does not exist.")
+            logger.error(f"The directory {dirname} does not exist.")
             return False
         ext = (os.path.splitext(output_path)[1]).lower()
         if ext not in ('.png', '.jpeg', '.jpg', 'webp'):
-            print(f"Unsupported output file type: {ext}")
+            logger.error(f"Unsupported output file type: {ext}")
             return False
     
     if config.output.size.is_square() :
-        print("Square output is currently not supported")
+        logger.error("Square output is currently not supported")
         return False
     
     width, height = config.output.size.to_tuple()
     if width < 1 or height < 1:
-        print("Invalid output size")
+        logger.error("Invalid output size")
         return False
+    
+    if config.output.valid_attr('background'):
+        path = config.output.background
+        if not os.path.isfile(path):
+            logger.error(f"The background image file {path} does not exist.")
+            return False
 
     if config.cover.path_valid():
         cover_path = config.cover.path
         if not os.path.isfile(cover_path):
-            print(f"The cover image file {cover_path} does not exist.")
+            logger.error(f"The cover image file {cover_path} does not exist.")
             return False
 
     if config.logo.path_valid():
         logo_path = config.logo.path
         if not os.path.isfile(logo_path):
-            print(f"The logo image file {logo_path} does not exist.")
+            logger.error(f"The logo image file {logo_path} does not exist.")
             return False
         if config.logo.size < 0:
-            print("Logo size must be >= 0")
+            logger.error("Logo size must be >= 0")
             return False
         if config.logo.mask not in ('self', 'black', 'alpha', 'auto', 'none'):
-            print("Invalid logo mask value")
+            logger.error("Invalid logo mask value")
             return False
 
     if config.title.has_text():
         if config.title.stroke.width < 0:
-            print("Title stroke width must be >= 0")
+            logger.error("Title stroke width must be >= 0")
             return False
         
     if config.album.has_text():
         if config.album.stroke.width < 0:
-            print("Album stroke width must be >= 0")
+            logger.error("Album stroke width must be >= 0")
             return False
         
     if config.globals.gutter < 0:
-        print("Gutter must be >= 0")
+        logger.error("Gutter must be >= 0")
         return False
     
     if config.cover.border.width < 0:
-        print("Cover border width must be >= 0")
+        logger.error("Cover border width must be >= 0")
         return False
 
     return True
