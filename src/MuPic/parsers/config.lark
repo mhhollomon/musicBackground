@@ -36,6 +36,7 @@ image_stmt : "image" [(ESCAPED_STRING | CNAME) [SIGNED_NUMBER]] "{" image_settin
     | "fit" "=" "stretch" -> fit_stretch
     | "fit" "=" "contain" "," WORD -> fit_contain
     | "fit" "=" "fill" "," WORD -> fit_fill
+    | "transform" "=" "scale" "," SIGNED_NUMBER "," SIGNED_NUMBER -> transform_scale
     | "rotation" "=" SIGNED_NUMBER -> rotation_int_option
     | position_option
     | border_spec

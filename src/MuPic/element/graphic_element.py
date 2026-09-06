@@ -331,11 +331,36 @@ class GraphicElement(ImageElement):
 
         full_bbox = self.get_bbox('full')
 
-        if cfg.rotation == 0 :
+        if cfg.rotation == 0 and cfg.transform is None:
             output_img = self._build(output_img)
-        else :
-            ele_img = Image.new("RGBA", full_bbox.extent.to_tuple())
-            ele_img = self._build(ele_img, full_bbox.origin)
+            self._debug(f"END Render (no rot or xfrm)")
+            return output_img
+
+        # build the image in a new canvas so we can
+        # manipulate below
+        ele_img = Image.new("RGBA", full_bbox.extent.to_tuple())
+        ele_img = self._build(ele_img, full_bbox.origin)
+
+        # both transform and rotation can change the needed origin to
+        # keep the image centered.
+        new_origin = full_bbox.origin
+        new_extent = full_bbox.extent
+
+        if cfg.transform is not None :
+            xform = cfg.transform[0]
+            if xform == 'scale' :
+                xscale, yscale = cfg.transform[1:]
+                old_extent = new_extent
+                new_extent = new_extent.scale(xscale, yscale)
+                # This is a simple resize.
+                ele_img = ele_img.resize(new_extent.to_tuple())
+                new_origin = new_origin - ((new_extent - old_extent) // 2)
+                self._debug(f"Transform - new origin = {new_origin}")
+
+            else :
+                raise ValueError(f"Unkown transform `{xform}` in {self.name}")
+
+        if cfg.rotation != 0 :
             self._dbgsave(ele_img, "before-rotate")
             ele_img = ele_img.rotate(cfg.rotation, expand=1, resample=Image.Resampling.BICUBIC)
             self._dbgsave(ele_img, "after-rotate")
@@ -346,9 +371,12 @@ class GraphicElement(ImageElement):
             #
             # This rotates about the center. So, need to offset the origin so the middle
             # stays put.
-            origin = full_bbox.origin - ((sizet(ele_img.size) - full_bbox.extent) // 2)
-            self._debug(f"Rotation - new origin = {origin}")
-            output_img.paste(ele_img, origin.to_tuple(), mask=ele_img)
+            old_extent = new_extent
+            new_extent = sizet(ele_img.size)
+            new_origin = new_origin - ((new_extent - old_extent) // 2)
+            self._debug(f"Rotation - new origin = {new_origin}")
+
+        output_img.paste(ele_img, new_origin.to_tuple(), mask=ele_img)
 
         self._debug(f"END Render")
 

@@ -2,7 +2,7 @@ start : simple_pos
     | attach_pos
     | overlay_pos
     | output_pos
-    | offset_pos
+    | relative_pos
 
 // --- SIMPLE
 simple_pos : LR_POS "-" TB_POS [ "-" INTEGER ]
@@ -21,7 +21,9 @@ one_pos_value : MINMAX | POS_VALUE
 overlay_pos : "overlay" "(" triple "," pos_values ["," anchor_values] ["," offset] ")"
 
 // --- OFFSET
-offset_pos : "offset" "(" triple "," pos_values ["," anchor_values] ["," offset_values] ")"
+relative_pos : _RELATIVE "(" triple "," pos_values ["," anchor_values] ["," offset_values] ")"
+
+_RELATIVE : /r(elative)?/
 
 // --- OUTPUT SHORTCUT
 output_pos : "output" "(" pos_values ["," anchor_values] ["," offset] ")"
@@ -32,7 +34,7 @@ pos_values : one_pos_value "," one_pos_value
 offset_values : offset "," offset
 offset : /[-+]?\d+/
 
-// alteration needed because of the higher priority of SUB_ELEMENT.
+// alternation needed because of the higher priority of SUB_ELEMENT.
 // If 'border' is given as the ELEMENT_NAME it will be parsed as
 // a SUB_ELEMENT.
 triple : (ELEMENT_NAME | SUB_ELEMENT) ["." SUB_ELEMENT] ["." PIECE]

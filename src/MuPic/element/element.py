@@ -291,6 +291,43 @@ class ImageElement(DebugBase) :
         return final_offset
 
 #-----------------------------------------------------------------------------
+    def _relative_offsets(self, pos : position, elem_size : sizet) -> point :
+
+        ref_elem = self.parent.get_elem(pos.target.element)
+        ref_bbox = ref_elem.get_bbox(sub=pos.target.sub, piece=pos.target.piece)
+
+        offset_pt = point(
+            pos.pos.x.calc(ref_bbox.extent.width),
+            pos.pos.y.calc(ref_bbox.extent.height)
+        )
+
+        # This is our reference point
+        attach_point = ref_bbox.origin + offset_pt
+        logger.debug(f'relative offsets - attach_point = {attach_point}')
+
+        # Figure out where the anhcor point is on the client
+        anchor = pos.anchor.x
+        adjust_fact = 0 if anchor == 'min' else 0.5 if anchor == 'mid' else 1
+        adjust_x = int(elem_size.width * adjust_fact)
+
+        anchor = pos.anchor.y
+        adjust_fact = 0 if anchor == 'min' else 0.5 if anchor == 'mid' else 1
+        adjust_y = int(elem_size.height * adjust_fact)
+
+        anchor_adjust = (adjust_x, adjust_y)
+        logger.debug(f'relative offsets - anchor_adjust = {anchor_adjust}')
+
+        # The reference point adjusted to be at the upper right of the client
+        adjusted_pt = attach_point - anchor_adjust
+        logger.debug(f'relative offsets - adjusted_pt = {adjusted_pt}')
+
+        final_offset = adjusted_pt + (pos.offset, pos.offset_y)
+        logger.debug(f'relative offsets - final_offset = {final_offset}')
+
+        return final_offset
+
+
+#-----------------------------------------------------------------------------
 
     def offsets_for_position(self, pos : position, elem_size : sizet) -> point :
 
@@ -301,8 +338,10 @@ class ImageElement(DebugBase) :
         
         if pos.ptype == 'attach' :
             final_offsets = self._attach_offsets(pos, elem_size)
-        else :
+        elif pos.ptype == 'overlay' :
             final_offsets = self._overlay_offsets(pos, elem_size)
+        elif pos.ptype == 'relative' :
+            final_offsets = self._relative_offsets(pos, elem_size)
 
         logger.debug(f"Position Calculated final_offsets = {final_offsets}")
         return final_offsets

@@ -88,10 +88,11 @@ class position :
 
         self.ptype : str = ret_tuple[0]
         self.target = PosTriple(*ret_tuple[1])
-        self.side : str= ret_tuple[2]
+        self.side : str = ret_tuple[2]
         self.pos = PostnSpec(*ret_tuple[3])
         self.anchor = AnchorSpec(*ret_tuple[4])
         self.offset : int = ret_tuple[5]
+        self.offset_y : int = ret_tuple[6]
 
     def _parse_pos(self, pos_str : str) :
         parser = get_parser('position')
@@ -122,6 +123,17 @@ class positionXform(Transformer) :
 
     @v_args(inline=True)
     def start(self, s : tuple) -> tuple:
+        """The return tuple has the following values :
+        0 : str - position type (overlay, attach, or relative)
+        1 : PosTriple
+        2 : str | None - side (piece)
+        3 : PostnSpec
+        4 : tuple[str, str] for AnchorSpec
+        5 : int - offset
+        6 : int - offset_y (may be 0) (only used by relative)
+
+        see _fix_pos() for more details
+        """
         return s
 
     @v_args(inline=True)
@@ -222,8 +234,8 @@ class positionXform(Transformer) :
         'max' : 100
     }
     def _fix_pos(self, style : str, sub_def : str, target : tuple, side : str | None,
-                 pos : tuple, anchor : tuple | None, offset : int | None) -> tuple:
-        logger.debug(f"{style} input -- target: {target}, side: {side}, pos: {pos}, anchor: {anchor}, offset: {offset}")
+                 pos : tuple, anchor : tuple | None, offset : int | None, offset_y : int = 0) -> tuple:
+        logger.debug(f"{style} input -- target: {target}, side: {side}, pos: {pos}, anchor: {anchor}, offset: {offset}, offset_y: {offset_y}")
 
         # default for offset
         if offset is not None :
@@ -275,7 +287,7 @@ class positionXform(Transformer) :
             anchor = (anchor_x, anchor_y)
 
 
-        return (style, pt, side, pos, anchor, offset)
+        return (style, pt, side, pos, anchor, offset, offset_y)
 
 
     @v_args(inline=True)
@@ -301,6 +313,24 @@ class positionXform(Transformer) :
 
         return self._fix_pos('overlay', 'content', ('output', 'content', None), None, pos, anchor, offset)
 
+    @v_args(inline=True)
+    def relative_pos(self, target : tuple, pos : tuple, 
+                    anchor : tuple | None, 
+                    offsets : tuple | None) -> tuple :
+
+        logger.debug(f"parser -- relative_pos -- offsets = {offsets}")
+
+        if offsets :
+            offsets = (
+                int(offsets[0].value),
+                int(offsets[1].value),
+            )
+        else :
+            offsets = (0, 0)
+
+        return self._fix_pos('relative', 'content', target, None, pos, anchor, *offsets)
+        
+
 
     @v_args(inline=True)
     def one_pos_value(self, value) :
@@ -314,6 +344,10 @@ class positionXform(Transformer) :
         
     @v_args(inline=True)
     def pos_values(self, left, right) :
+        return (left, right)
+
+    @v_args(inline=True)
+    def offset_values(self, left, right) :
         return (left, right)
 
     @v_args(inline=True)

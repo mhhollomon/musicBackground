@@ -46,9 +46,9 @@ class MuParseError(Exception) :
         super().__init__(self, msg)
 
 _uuids : set[str] = set()
-def _random_name() :
+def _random_name(prefix : str = '__a') :
     while True :
-        u = '__' + uuid4().hex[:8]
+        u = prefix + uuid4().hex[:8]
         if u not in _uuids :
             _uuids.add(u)
             return u
@@ -366,6 +366,21 @@ class Configuration(Transformer) :
             raise MuParseError(f"Invalid align setting for fill `{valign}`")
         return OptionTuple('fit', ('fill', valign))
 
+    #
+    # transform = scale, <xfactor>, <yfactor>
+    #
+    @v_args(inline=True)
+    def transform_scale(self, xfactor : Token, yfactor : Token) -> OptionTuple :
+        scale_x = float(xfactor.value)
+        scale_y = float(yfactor.value)
+
+        if scale_x <= 0 or scale_y <= 0 :
+            raise MuParseError(f"transform scale factors must be greater than zero : ({scale_x}, {scale_y})")
+        return OptionTuple('transform', ('scale', scale_x, scale_y))
+
+
+
+
     @v_args(inline=True)
     def text_stmt(self, name_token : Token, zorder_token : Token, *children) -> OptionTuple:
         settings = self._util_consolidate('text', children, extras={'type':'text'})
@@ -410,8 +425,8 @@ class Configuration(Transformer) :
         if len(pset) != len(parms) :
             raise MuParseError(f"Duplicate parameters defined for template : {parms}")
 
-        if 'p' in pset :
-            raise MuParseError(f"parameter `p` is reserved and cannot be in the parameter list")
+        if 'P' in pset or 'R' in pset :
+            raise MuParseError(f"parameters `P` and `R` are reserved and cannot be in the parameter list")
 
         return parms
 
@@ -449,7 +464,8 @@ class Configuration(Transformer) :
         data : dict = {}
 
         data = {i[0] : i[1] for i in zip(formals, parms)}
-        data['p'] = self.last_element_name
+        data['P'] = self.last_element_name
+        data['R'] = _random_name('r__')
 
         new_body = re.sub(r'\$([a-zA-Z])',
                           lambda match : data[match.groups()[0]],

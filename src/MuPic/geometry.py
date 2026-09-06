@@ -147,6 +147,9 @@ class sizet :
     def copy(self) -> 'sizet' :
         return sizet(self.width, self.height)
 
+    def scale(self, wfactor : float, hfactor : float) -> 'sizet' :
+        return sizet(self.width * wfactor, self.height * hfactor)
+
     def __add__(self, other) -> 'sizet' :
 
         if isinstance(other, sizet) :

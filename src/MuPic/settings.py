@@ -215,6 +215,7 @@ class ImageSettings(PathSetting) :
     border : BorderSettings | None = None
     margin : int = 0
     rotation : int = 0
+    transform : tuple | None = None 
 
     @classmethod
     def from_dict(cls, d : dict) -> 'ImageSettings' :
@@ -238,6 +239,8 @@ class ImageSettings(PathSetting) :
             print(f"{new_prefix}zorder = {self.zorder}")            
         print(f"{new_prefix}path = {self.path}")
         print(f"{new_prefix}size = {self.size}")
+        if self.transform :
+            print(f"{new_prefix}transform = {self.transform}")
         if self.color is not None :
             print(f"{new_prefix}color = \"{self.color}\"")
         print(f"{new_prefix}mask = {self.mask}")
