@@ -23,5 +23,5 @@ def get_parser(name : str) -> Lark :
     info = _PARSERS[name]
 
     grammar = Path(__file__).parent / info.grammar
-    parser = Lark(grammar.read_text(), parser='lalr', debug=True, start=info.start, maybe_placeholders=True, strict=True)
+    parser = Lark(grammar.read_text(), parser='lalr', debug=True, start=info.start, maybe_placeholders=True) #, strict=True)
     return parser

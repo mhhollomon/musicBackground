@@ -28,22 +28,26 @@ OUTPUT_FIT : "cover" | "contain"
 
 // ---- IMAGE ----------------------------------------------
 image_stmt : "image" [(ESCAPED_STRING | CNAME) [SIGNED_NUMBER]] "{" image_setting+ "}"
-?image_setting : path_option
+?image_setting :
     | "size" "=" /max(square)?/ -> size_max
     | "size" "=" "scale" "," SIGNED_NUMBER -> scale_size
-    | size_2d_option
-    | "mask" "=" WORD -> mask_option
-    | "fit" "=" "stretch" -> fit_stretch
-    | "fit" "=" "contain" "," WORD -> fit_contain
-    | "fit" "=" "fill" "," WORD -> fit_fill
+    | "size" "=" SIZE -> size_2d_option
     | "transform" "=" "scale" "," SIGNED_NUMBER "," SIGNED_NUMBER -> transform_scale
     | "rotation" "=" SIGNED_NUMBER -> rotation_int_option
     | position_option
     | border_spec
-    | color_option
-    | path_option
+    | content_spec
+    | "color" "=" (HEXCOLOR | FUNCCOLOR | ESCAPED_STRING | CNAME) -> color_option
     | border_spec
     | margin_int_option
+
+content_spec.20 : "content" "{" content_settings+ "}"
+?content_settings : "file" "=" STRING_VALUE -> file_option
+    | "color" "=" (HEXCOLOR | FUNCCOLOR | ESCAPED_STRING | CNAME) -> color_option
+    | "mask" "=" WORD -> mask_option
+    | fit_option
+    
+fit_option : "fit" "=" WORD ["," WORD]
 
 // ---- TEXT ----------------------------------------------
 text_stmt : "text" [(ESCAPED_STRING | CNAME) [ INTEGER]] "{" text_setting+ "}"

@@ -179,7 +179,7 @@ output {
 # optional defaults to 0.
 #
 
-text "name",  -20 {
+text "name"  -20 {
     # The actual text. Multiple lines can be given using "\n" to denote the end of the line.
     # required.
     text = "This is the title"
@@ -254,34 +254,56 @@ text "name",  -20 {
 # Since the actual image is optional, the image element can also be used
 # to draw colored rectangles on the output.
 
-image logo {
+image some_name {
 
-    # Note that while both path and color are optional,
-    # one must be given.
-    # If both are given, path takes precedence.
+    # Sets the content of the new element.
+    # If it is not specified, the content area will be filed with
+    # the background color of specified. Otherwise, it will be transparent.
+    # Optional
+    content {
+        # One of `file` or `color` must be given.
+        # If both are given, it is an error.
 
-    # The path to the image.
-    # The image can be any type supported by the `pillow` module.
-    # This path is resolved using the rules in the `Paths` section above.
-    # optional.
-    path = /path/to/cover/file.png
+        # The path to the image.
+        # The image can be any type supported by the `pillow` module.
+        # This path is resolved using the rules in the `Paths` section above.
+        # optional.
+        file = /path/to/cover/file.png
 
-    # fit
-    # How to place the image in the element
-    # stretch
-    #   The image is force resized to the content bbox. Aspect Ratio is not preserved.
-    # contain, <align>
-    #   The image is resized to completely fit into the bbox maintaining aspect ratio.
-    #   If the scaled image is smaller than the bbox, align (`min`, `mid`, `max`)
-    #   is used to decide how to place the image in the bbox.
-    # fill, <crop>
-    #   The image is resized to completely fill the bbox maintaining aspect ratio.
-    #   If the scaled image is larger than the bbox, crop (`min`, `mid`, `max`)
-    #   is used to decide which part of the image to save.
-    # See the tests/image_fit.mupic for examples.
-    fit = fill, mid
+        # Color to use as the content
+        # optional.
+        color = #112233
+
+        # fit
+        # How to place the image in the element. This is ignored for `color`.
+        # stretch
+        #   The image is force resized to the content bbox. Aspect Ratio is not preserved.
+        # contain, <align>
+        #   The image is resized to completely fit into the bbox maintaining aspect ratio.
+        #   If the scaled image is smaller than the bbox, align (`min`, `mid`, `max`)
+        #   is used to decide how to place the image in the bbox.
+        # fill, <crop>
+        #   The image is resized to completely fill the bbox maintaining aspect ratio.
+        #   If the scaled image is larger than the bbox, crop (`min`, `mid`, `max`)
+        #   is used to decide which part of the image to save.
+        # See the tests/image_fit.mupic for examples.
+        fit = fill, mid
+
+        # Algorithm to compute a mask for the logo image. This is ignored for `color`.
+        # "self" - uses the luminance channel of the image as-is. This means that
+        #     the background will show through at least a little on any part of
+        #     the logo image that is not fully white.
+        # "black" - clamps the luminance channel, so that only black pixels in the logo 
+        #     are transparent.
+        # "alpha" - uses the alpha channel of the image as a mask.
+        # "auto" - automatically chooses between "alpha" and "black". This is the default.
+        # "none" : No masking is done.
+        # optional
+        mask = auto
+    }
 
     # background color.
+    # This is the color that will fill the margin and content if not otherwise specified.
     # optional. Default is `black`
     color = green
 
@@ -292,7 +314,7 @@ image logo {
 
 
     # Size for the image.
-    # An absolute position can be specified using a WxH format :
+    # An absolute size can be specified using a WxH format :
     #   size = 400x600
     # The size can also be specified as relative to the positioning
     # target elements content bbox (see the concepts document).
@@ -303,19 +325,6 @@ image logo {
     #                          # element scaled by <factor> in both dimensions.
     # required.
     size = scale, 0.8
-
-
-    # Algorithm to compute a mask for the logo image.
-    # "self" - uses the luminance channel of the image as-is. This means that
-    #     the background will show through at least a little on any part of
-    #     the logo image that is not fully white.
-    # "black" - clamps the luminance channel, so that only black pixels in the logo 
-    #     are transparent.
-    # "alpha" - uses the alpha channel of the image as a mask.
-    # "auto" - automatically chooses between "alpha" and "black". This is the default.
-    # "none" : No masking is done.
-    # optional
-    mask = auto
 
     # border for the image.
     # See the `output` border section for details.

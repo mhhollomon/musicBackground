@@ -36,10 +36,11 @@ image rounded {
 }
 
 image rounded_img {
-    #color = #7777ff
-    path = resources/portrait-mode.png
-    fit = fill, mid
-    mask = auto
+    content { 
+        file = resources/portrait-mode.png
+        fit = fill, mid
+        mask = auto
+    }
     size = 200x200
     border {
         width = 20
@@ -50,10 +51,11 @@ image rounded_img {
 }
 
 image straight_img {
-    #color = #7777ff
-    path = resources/portrait-mode.png
-    fit = fill, mid
-    mask = auto
+    content { 
+        file = resources/portrait-mode.png
+        fit = fill, mid
+        mask = auto
+    }
     size = 200x200
     border {
         width = 20
@@ -63,10 +65,11 @@ image straight_img {
 }
 
 image rounded_img_land {
-    #color = #7777ff
-    path = resources/landscape-mode.png
-    fit = fill, mid
-    mask = auto
+    content { 
+        file = resources/landscape-mode.png
+        fit = fill, mid
+        mask = auto
+    }
     size = 200x200
     border {
         width = 20

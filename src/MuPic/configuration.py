@@ -95,22 +95,15 @@ class Configuration(Transformer) :
         logger.debug(f"updated default settings = {defaults}")
         new_ele = []
         for i, e in enumerate(input['elements'] ):
-            if 'name' not in e :
-                e['name'] = f"element_{i}"
-
             if e['type'] == 'text' :
                 z = deepcopy(defaults)
                 dictmerge(z, e)
                 new_ele.append(z)
             elif e['type'] == 'image' :
-                if 'path' in e :
-                    e['path'] = resolve_path(e['path'], self.context)
+                if 'content' in e and 'file' in e['content']:
+                    e['content']['file'] = resolve_path(e['content']['file'], self.context)
                 new_ele.append(e)
         input['elements'] = new_ele
-
-        # -- cover path
-        if 'cover' in input and 'path' in input['cover'] :
-            input['cover']['path'] = resolve_path(input['cover']['path'], self.context)
 
         # -- background path
         if 'background' in input['output'] :
@@ -342,29 +335,29 @@ class Configuration(Transformer) :
 
     #
     # fit = stretch
-    #
-    def fit_stretch(self, children) -> OptionTuple :
-        return OptionTuple('fit', ('stretch',))
-
-    #
     # fit = contain, <alignment>
-    #
-    @v_args(inline=True)
-    def fit_contain(self, align : Token) -> OptionTuple :
-        valign = align.value.lower()
-        if valign not in MINMAX_SETTINGS :
-            raise MuParseError(f"Invalid align setting for contain `{valign}`")
-        return OptionTuple('fit', ('contain', valign))
-
-    #
     # fit = fill, <alignment>
     #
     @v_args(inline=True)
-    def fit_fill(self, align : Token) -> OptionTuple :
-        valign = align.value.lower()
-        if valign not in MINMAX_SETTINGS :
-            raise MuParseError(f"Invalid align setting for fill `{valign}`")
-        return OptionTuple('fit', ('fill', valign))
+    def fit_option(self, type_token : Token, align_token : Token | None) :
+        ftype = type_token.value.lower()
+        if ftype not in ('stretch', 'contain', 'fill') :
+            raise MuParseError(f"Invalid fit option `{ftype}`")
+
+        align = None
+        if align_token :
+            if ftype == 'stretch' :
+                raise MuParseError("`stretch` fit option does not take a value.")
+
+            align = align_token.value.lower()
+            if align not in MINMAX_SETTINGS :
+                raise MuParseError(f"Invalid align setting for `{ftype}` `{align}`")
+        elif ftype in  ('contain', 'fill'):
+            raise MuParseError("`{ftype}` fit option requires an alignment value.")
+
+            
+        return OptionTuple('fit', (ftype, align))
+
 
     #
     # transform = scale, <xfactor>, <yfactor>

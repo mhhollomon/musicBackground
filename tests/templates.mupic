@@ -14,7 +14,7 @@ image starter {
 template t(i, o) {{{ 
     image b$i {
         size = scale, 0.7
-        position = "attach($p, right, mid, mid, $o)"
+        position = "attach($P, right, mid, mid, $o)"
         color = "hsv($i0, 50%, 80%)"
     }
 }}}
@@ -28,9 +28,11 @@ render t(4, 55)
 
 image logo 1000 {
     size = 75x75
-    mask = auto
     position = "overlay(output, max, max, max, max, 10)"
-    path = "../../muArt/src/common/viking-treble-clef-no-fill.png"
+    content {
+        file = ../../muArt/src/common/viking-treble-clef-no-fill.png
+        mask = auto
+    }
 
 }
 

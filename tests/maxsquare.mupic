@@ -13,23 +13,17 @@ output {
 
 image "hostportrait" {
     size = 400x600
-    color = lightblue
-    border  {
-        width = 2
-        color = black
-    }
     position = "overlay(output, min, min, 5)"
+    content {color = lightblue}
+    border = black, 2
 }
 
 image "insideportrait" {
     size = maxsquare
-    color = yellow
-    border  {
-        width = 2
-        color = black
-    }
-    margin = 5
     position = "overlay(hostportrait, min, min)"
+    content {color = yellow}
+    border = black, 2
+    margin = 5
 
 }
 
@@ -37,23 +31,17 @@ image "insideportrait" {
 
 image "hostlandscape" {
     size = 600x400
-    color = lightblue
-    border  {
-        width = 2
-        color = black
-    }
     position = "overlay(output, max, min, 5)"
+    content {color = lightblue}
+    border = black, 2
 }
 
 image "insidelandscape" {
     size = maxsquare
-    color = yellow
-    border  {
-        width = 2
-        color = black
-    }
-    margin = 5
     position = "overlay(hostlandscape, min, min)"
+    content {color = yellow}
+    border = black, 2
+    margin = 5
 
 }
 
@@ -61,22 +49,16 @@ image "insidelandscape" {
 
 image "hostsquare" {
     size = 400x400
-    color = lightblue
-    border  {
-        width = 2
-        color = black
-    }
     position = "overlay(output, max, max, 5)"
+    content {color = lightblue}
+    border = black, 2
 }
 
 image "insidesquare" {
     size = maxsquare
-    color = yellow
-    border  {
-        width = 2
-        color = black
-    }
-    margin = 5
     position = "overlay(hostsquare, min, min)"
+    content {color = yellow}
+    border = black, 2
+    margin = 5
 
 }

@@ -78,11 +78,11 @@ class ImageElement(DebugBase) :
         self.bbox[sub] = new_bbox
 
 #-----------------------------------------------------------------------------
-    def _add_alpha(self, color : str, alpha : int) :
+    def _add_alpha(self, color : str, alpha : int) -> tuple[int, int, int, int] :
         """Add an alpha value to a color reference"""
 
         ct = ImageColor.getrgb(color)
-        return (*ct, alpha)
+        return (*(ct[0:3]), alpha)
     
 #-----------------------------------------------------------------------------
     def layout(self) :

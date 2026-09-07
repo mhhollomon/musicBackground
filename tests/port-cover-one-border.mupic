@@ -8,14 +8,16 @@ output {
   path = ../test-out/port-cover-one-border.png
 }
 
-cover {
-  fit = square
-  path = "resources/landscape-mode.png"
-  margin = 100
-  crop = mid
-  align = min
-  border {
-    width  {l=100}
-    color = blue
-  }
+image cover {
+    size = maxsquare
+    position = "output(min, min)"
+    content {
+        file = "resources/landscape-mode.png"
+        fit = fill, mid
+    }
+    margin = 10
+    border {
+        width  {l=100}
+        color = blue
+    }
 }

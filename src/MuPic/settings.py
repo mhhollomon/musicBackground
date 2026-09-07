@@ -62,13 +62,6 @@ class SettingsBase :
         print(f"{prefix}{str(self)}")
 
 
-# -------------------------------------------------------------------------
-
-class PathSetting(SettingsBase) :
-    def path_valid(self) -> bool :
-        path = getattr(self, 'path')
-        return path is not None and path != ''
-
 
 # -------------------------------------------------------------------------
 
@@ -164,7 +157,7 @@ class BorderSettings(SettingsBase) :
 # -------------------------------------------------------------------------
 
 @dataclass
-class OutputSettings(PathSetting) :
+class OutputSettings(SettingsBase) :
     __REQ_ARGS__ = ('size',)
     size : sizet
     path : str | None = None
@@ -197,25 +190,59 @@ class OutputSettings(PathSetting) :
         print(f"{prefix}}}")
 
 # -------------------------------------------------------------------------
+@dataclass
+class ImageContentSettings(SettingsBase) :
+    file : str | None = None
+    color : str | None = None
+    # contain, fill, stretch
+    fit : tuple = ('fill', ('mid',))
+    mask : str = 'auto'
+
+    def __post_init__(self) :
+        count = self.has_color() + self.has_file()
+
+        if count != 1 :
+            raise ValueError(f"COntent setting must exactly one of `file` or `color`")
+        
+
+    @classmethod
+    def from_dict(cls, d : dict) :
+        cls.check_args(d)
+        return cls(**d)        
+
+    def print(self, prefix: str = ''):
+        print(f"{prefix}content {{")
+        new_prefix = prefix + '  '
+        if self.file :
+            print(f"{new_prefix}path = {self.file}")
+        print(f"{new_prefix}mask = {self.mask}")
+        print(f"{new_prefix}fit = {self.fit}")
+        print(f"{prefix}}}")
+
+    def has_file(self) -> bool :
+        return self.file is not None 
+
+    def has_color(self) -> bool :
+        return self.color is not None 
+
+
+# -------------------------------------------------------------------------
 
 @dataclass
-class ImageSettings(PathSetting) :
+class ImageSettings(SettingsBase) :
     __REQ_ARGS__ = ('name', 'size', 'position')
     name : str
     size : sizet | tuple[str, Any]
     position : position
-    # contain, fill, stretch
-    fit : tuple = ('fill', ('mid',))
-    mask : str = 'auto'
     zorder : int = 0
     # legal to have no path - just a background color.
     # but one of the two needs to be set.
-    path : str | None = None
     color : str | None = None
     border : BorderSettings | None = None
     margin : int = 0
     rotation : int = 0
     transform : tuple | None = None 
+    content : ImageContentSettings | None = None
 
     @classmethod
     def from_dict(cls, d : dict) -> 'ImageSettings' :
@@ -223,6 +250,8 @@ class ImageSettings(PathSetting) :
         d['position'] = position(d['position'])
         if 'border' in d :
             d['border'] = BorderSettings.from_dict(d['border'])
+        if 'content' in d :
+            d['content'] = ImageContentSettings.from_dict(d['content'])
         try :
             t = ImageSettings(**d)
         except Exception as e :
@@ -237,15 +266,14 @@ class ImageSettings(PathSetting) :
         new_prefix = prefix + '  '
         if self.zorder != 0 :
             print(f"{new_prefix}zorder = {self.zorder}")            
-        print(f"{new_prefix}path = {self.path}")
         print(f"{new_prefix}size = {self.size}")
+        if self.content :
+            self.content.print(new_prefix)
         if self.transform :
             print(f"{new_prefix}transform = {self.transform}")
         if self.color is not None :
             print(f"{new_prefix}color = \"{self.color}\"")
-        print(f"{new_prefix}mask = {self.mask}")
         print(f"{new_prefix}position = {self.position}")
-        print(f"{new_prefix}fit = {self.fit}")
         if self.border is not None :
             self.border.print(new_prefix)
         if self.margin > 0 :

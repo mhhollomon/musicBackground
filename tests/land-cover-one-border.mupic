@@ -10,14 +10,16 @@ output {
 }
 
 image cover {
-    position = "output(min, min)"
     size = max
-    fit = fill, mid
-    path = "resources/landscape-mode.png"
+    position = "output(min, min)"
+    content {
+        fit = fill, mid
+        file = "resources/landscape-mode.png"
+        mask = black
+    }
     margin = 100
-    mask = black
-  border {
-    width {l=100}
-    color = "blue"
+    border {
+        width {l=100}
+        color = "blue"
     }
 }

@@ -8,82 +8,78 @@ output {
 }
 
 image stretch_la {
-    path = resources/landscape-mode.png
     size=200x200
-    fit = stretch
+    position = "overlay(output, 200, 100)"
+    content {
+        file = resources/landscape-mode.png
+        fit = stretch
+    }
     color = blue
     border = black, 2
-    position = "overlay(output, 200, 100)"
 }
 
 
 image contain_min_la {
-    path = resources/landscape-mode.png
     size=200x200
-    fit = contain, min
-    border {
-        width = 2
-        color = black
-    }
     position = "overlay(output, 200, 350)"
+    content {
+        file = resources/landscape-mode.png
+        fit = contain, min
+    }
+    border = black, 2
 }
 
 
 image contain_mid_la {
-    path = resources/landscape-mode.png
     size=200x200
-    fit = contain, mid
-    border {
-        width = 2
-        color = black
-    }
     position = "attach(contain_min_la, right, min, min, 50)"
+    content {
+        file = resources/landscape-mode.png
+        fit = contain, mid
+    }
+    border = black, 2
 }
 
 image contain_max_la {
-    path = resources/landscape-mode.png
     size=200x200
-    fit = contain, max
-    border {
-        width = 2
-        color = black
-    }
     position = "attach(contain_mid_la, right, min, min, 50)"
+    content {
+        file = resources/landscape-mode.png
+        fit = contain, max
+    }
+    border = black, 2
 }
 
 #-------------- 
 
 image fill_min_la {
-    path = resources/landscape-mode.png
     size=200x200
-    fit = fill, min
-    border {
-        width = 2
-        color = black
-    }
     position = "overlay(output, 200, 600)"
+    content {
+        file = resources/landscape-mode.png
+        fit = fill, min
+    }
+    border = black, 2
 }
 
 image fill_mid_la {
-    path = resources/landscape-mode.png
-    size=200x200
-    fit = fill, mid
-    border {
-        width = 2
-        color = black
-    }
+    size = 200x200
     position = "attach(fill_min_la, right, min, min, 50)"
+    content {
+        file = resources/landscape-mode.png
+        fit = fill, mid
+    }
+    border = black, 2
 }
 
 image fill_max_la {
-    path = resources/landscape-mode.png
-    size=200x200
-    fit = fill, max
-    border {
-        width = 2
-        color = black
-    }
+    size = 200x200
     position = "attach(fill_mid_la, right, min, min, 50)"
+    content {
+        file = resources/landscape-mode.png
+        fit = fill, max
+    }
+    border = black, 2
 }
 
 # ------------------------------

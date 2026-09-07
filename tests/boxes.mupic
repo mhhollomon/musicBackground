@@ -93,7 +93,9 @@ text "t9" {
 
 
 image "bordered" {
-    path = resources/portrait-mode.png
+    content {
+        file = resources/portrait-mode.png
+    }
     size = 300x300
     border {
         width = 11

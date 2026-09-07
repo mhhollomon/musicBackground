@@ -158,11 +158,19 @@ class GraphicElement(ImageElement):
     #-----------------------------------------------------
     def _build_image(self, needed_size : sizet) -> Image.Image :
 
-        cfg = self.settings
+        cfg = self.settings.content
+        assert cfg is not None
 
-        file_path  = cfg.path
+        if cfg.has_color() :
+            self._debug("Using color as content")
+            assert cfg.color is not None
+            img = Image.new("RGBA", needed_size.to_tuple(), self._add_alpha(cfg.color, 255))
+            return img
+
+        file_path  = cfg.file
         assert file_path is not None
 
+        self._debug(f"Using file `{file_path}` as content")
         with Image.open(file_path) as img_img:
 
             fit = cfg.fit
@@ -289,10 +297,9 @@ class GraphicElement(ImageElement):
             output_img.paste(bg, full_origin.to_tuple())
 
         ## Image file
-        if cfg.path is not None:   
-            self._debug(f"Loading image from {cfg.path}")
+        if cfg.content:   
             img_img = self._build_image(content_bbox.extent)
-            mask_img = self._compute_mask(img_img, cfg.mask)
+            mask_img = self._compute_mask(img_img, cfg.content.mask)
             self._debug(f"pasting image at {content_origin.to_tuple()}")
             output_img.paste(img_img, content_origin.to_tuple(), mask=mask_img)
 

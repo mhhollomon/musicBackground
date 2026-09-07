@@ -8,58 +8,58 @@ output {
 
 image center 10 {
     size = 400x400
-    margin = 10
-    color = blue
     position = "overlay(output, mid, mid, mid, mid)"
+    margin = 10
+    content { color = blue }
 }
 
 image left {
     size = 250x250
-    margin = 10
-    color = red
     position = "attach(center, left, mid, mid)"
+    margin = 10
+    content {color = red}
 }
 
 image "left_left" {
     size = 100x100
-    margin = 10
-    color = red
     position = "attach(left, left, min, min)"
+    margin = 10
+    content {color = red}
 }
 
 image left_left_max {
     size = 100x100
-    margin = 10
-    color = red
     position = "attach(left, left, max, max)"
+    margin = 10
+    content {color = red}
 }
 
 image "right" {
     size = 250x250
-    margin = 10
-    color = green
     position = "attach(center, right, mid, mid)"
+    margin = 10
+    content {color = green}
 }
 
 image "right_right" {
     size = 100x100
-    margin = 10
-    color = red
     position = "attach(right, right, min, min)"
+    margin = 10
+    content {color = red}
 }
 
 image right_right_max {
     size = 100x100
-    margin = 10
-    color = red
     position = "attach(right, right, max, max)"
+    margin = 10
+    content {color = red}
 }
 
 image "top" {
     size = 250x250
-    margin = 10
-    color = red
     position = "attach(center, top, mid, mid)"
+    margin = 10
+    content {color = red}
     border {
         width = 2
         color = black
@@ -68,22 +68,22 @@ image "top" {
 
 image top_top {
     size = 100x100
-    margin = 10
-    color = red
     position = "attach(top, top, min, min)"
+    margin = 10
+    content {color = red}
 }
 
 
 image "bottom" {
     size = 250x250
-    margin = 10
-    color = green
     position = "attach(center, bottom, mid, mid)"
+    margin = 10
+    content {color = green}
 }
 
 image "bottom_bottom" {
     size = 100x100
-    margin = 10
-    color = red
     position = "attach(bottom, bottom, min, min)"
+    margin = 10
+    content {color = red}
 }

@@ -3,15 +3,17 @@
 # landscape cover to square on landscape output with margin and border.
 
 output {
-  size = 1920x1080
-  path = ../test-out/land-cover-square.png
+    size = 1920x1080
+    path = ../test-out/land-cover-square.png
 }
 
 image cover {
-  size = maxsquare
-  position = "output(max, max)"
-  fit = fill, mid
-  path = resources/landscape-mode.png
-  margin = 100
-  border = blue, 100
+    size = maxsquare
+    position = "output(max, max)"
+    content {
+        fit = fill, mid
+        path = resources/landscape-mode.png
+    }
+    margin = 100
+    border = blue, 100
 }
