@@ -1,8 +1,9 @@
 from copy import deepcopy
 
+from math import pi, tan
 from typing import TYPE_CHECKING, Any
 
-from ..utils import clamped_mask
+from ..utils import clamped_mask, resize_contain
 
 if TYPE_CHECKING:
     from ..music_image import MusicImage
@@ -12,7 +13,7 @@ from .border_helper import BorderHelper
 from ..settings import ImageSettings
 from ..geometry import point, sizet, rect
 
-from PIL import Image, ImageChops
+from PIL import Image, ImageChops, ImageTransform
 
 import logging
 logger = logging.getLogger(__name__)
@@ -182,25 +183,8 @@ class GraphicElement(ImageElement):
                 img_img = img_img.resize(new_size.to_tuple())
 
             elif fit[0] == 'contain' :
-                # Make the image as large as possible while making sure it fits in
-                # entirely into container. But maintain A.R.
-                width_factor = needed_size.width / img_size.width
-                height_factor = needed_size.height / img_size.height
-                new_size = img_size * min(width_factor, height_factor)
-                img_img = img_img.resize(new_size.to_tuple())
+                img_img = resize_contain(img_img, needed_size, fit[1], cfg.color)
 
-                if new_size != needed_size :
-                    # it will be smaller
-                    buffer = Image.new("RGB", size=needed_size.to_tuple(), color=cfg.color)
-                    if fit[1] == 'min' :
-                        paste_pt = sizet(0, 0)
-                    elif fit[1] == 'mid' :
-                        paste_pt = (needed_size - new_size) // 2
-                    else :
-                        paste_pt = (needed_size - new_size)
-
-                    buffer.paste(img_img, paste_pt.to_tuple())
-                    img_img = buffer
             elif fit[0] == 'fill' :
                 # Make sure the image completely fills the container
                 # while preserving A.R.
@@ -362,7 +346,32 @@ class GraphicElement(ImageElement):
                 # This is a simple resize.
                 ele_img = ele_img.resize(new_extent.to_tuple())
                 new_origin = new_origin - ((new_extent - old_extent) // 2)
-                self._debug(f"Transform - new origin = {new_origin}")
+                self._debug(f"Transform  scale - new origin = {new_origin}")
+
+            elif xform == 'shear' :
+                old_extent = new_extent
+                self._dbgsave(ele_img, "before-shear")
+                x_factor = -tan(cfg.transform[1] * pi / 180.0)
+                y_factor = -tan(cfg.transform[2] * pi / 180.0)
+                ele_img = ele_img.transform((old_extent * 4).to_tuple(),
+                    # -old_extent.width slides the whole thing over to the right
+                    # on the x-axis and down on the y-axis.
+                    # This is need so the transform doesn't fall off the edge of new image
+                    # and get clipped.
+                    ImageTransform.AffineTransform([1, x_factor, -old_extent.width, y_factor, 1, -old_extent.height]),
+                    resample = Image.Resampling.BICUBIC
+                )
+                self._dbgsave(ele_img, "after-shear")
+
+                ele_img = self._trim_image(ele_img)
+                self._dbgsave(ele_img, "after-first-trim")
+                ele_img = resize_contain(ele_img, old_extent, 'mid')
+                ele_img = self._trim_image(ele_img)
+                new_extent = sizet(ele_img.size)
+                new_origin = new_origin - ((new_extent - old_extent) // 2)
+                self._debug(f"Transform  shear - new origin = {new_origin}")
+
+
 
             else :
                 raise ValueError(f"Unkown transform `{xform}` in {self.name}")

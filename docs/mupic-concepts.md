@@ -59,7 +59,7 @@ element, so margin bbox does not exist), an error will be raised.
 ### Piece
 
 `Margin` and `border` are made of up to 4 overlapping pieces - left, right, top, bottom.
-Those words are used to norraw the target to just one of the pieces.
+Those words are used to narraw the target to just one of the pieces.
 
 For `content` and `full` bboxes, pieces do not exist and the _piece_ word and 
 the separator dot are left off.
@@ -91,8 +91,8 @@ The default z-order is 0.
 Elements are always positioned with respect to other elements. Even when placing
 on the full image, the `output` pseudo-element is used for positioning.
 
-There are three ways to position - a simple syntax, attach syntax, and overlay
-syntax.
+There are 4 ways to position - a simple syntax, attach syntax, overlay
+syntax, and relative syntax.
 
 All element types have a `position` specifier that must be present in the 
 configuration.
@@ -184,9 +184,9 @@ Control the off-axis distance.
 `position` and `anchor` work together to defined the on-axis placement of the client
 element (`x` for `top`, `bottom`; `y` for `left`, `right`).
 
-`offset` allows you fine-tune the relative distance ot the other off-axis direction.
+`offset` allows you fine-tune the relative distance on the other off-axis direction.
 
-By default, the `offset` is 0 and anchor point will directly on the attach point.
+By default, the `offset` is 0 and the anchor point will be directly on the attach point.
 
 `offset` is an integer that may be positive or negative. Positive offsets move the
 client _away_ from the target. Negative offset move the client _towards_ the
@@ -272,3 +272,56 @@ This is internally transformed to :
 ```
 overlay(output.content, x_pos, y_pos, [, x_anchor, y_anchor] [, offset])
 ```
+
+## Relative Syntax
+
+Similar to `overlay` but makes the offset more powerful.
+
+```
+relative(triple, side, x_pos, y_pos [, x_anchor, y_anchor] [, offset_x, offset_y])
+r(triple, side, x_pos, y_pos [, x_anchor, y_anchor] [, offset_x, offset_y])
+```
+### triple
+An [address triple](#address-triple). Several shortcuts are implemented.
+
+`element` becomes `element.content`
+
+`border.piece` becomes `cover.border.piece`
+
+### position
+Where inside the targe element to place the client element. Both positions can
+be specified as:
+
+- A keyword - one of `min`, `mid`, `max`.
+- A percentage - e.g. `20%`. This can be less than zero and greater than 100%
+  if required. These will place the attach point outside  the target element
+  The percentage is relative to the size of the _target element_ in that direction.
+- A pixel amount using `px` - e.g. `20px` . this is counted based on the far left
+  or top of the target element.
+
+  A plain number is considered a `px` distance.
+
+`min` is equivalent to `0%`. `mid` is equivalent to `50%`. `max` is equivalent 
+to `100%`.
+
+
+### anchor
+Where inside the client element to attach. Specify one of
+`min`, `mid`, `max`.
+
+If anchor is not given, a default is chosen based on the `position` value.
+
+If `position` is a percentage and is less than `30%` then anchor is 'min'.
+
+If `position` is a percentage and is < `70%` and >= `30%` then anchor is 'mid'.
+
+If `position` is a percentage and is and >= `70%` then anchor is 'mid'.
+
+If `position` is a keyword, the same keyword is used for anchor.
+
+Otherwise, anchor is set to `min`
+
+### offset
+
+A pair of integers that allow you to offset that many pixels. The offset values
+are directly added to the coordinates.

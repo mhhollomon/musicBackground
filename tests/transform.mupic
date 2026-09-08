@@ -1,6 +1,6 @@
 
 output {
-    size = 600x800
+    size = 600x1300
     path = ../test-out/transform.png
     color = white
     border = black, 2
@@ -21,4 +21,21 @@ image rotate {
     color = blue
     transform = scale, 3, 1
     rotation = 90
+}
+
+image shear {
+    size = 100x100
+    position = "output(210, 800)"
+    border = green, 5
+    color = blue
+    transform = shear, -22.5
+}
+
+image shear_rotate {
+    size = 100x100
+    position = "output(210, 1100)"
+    border = green, 5
+    color = blue
+    transform = shear, -22.5
+    rotation = 45
 }

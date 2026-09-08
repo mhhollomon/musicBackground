@@ -336,5 +336,19 @@ image some_name {
     # optional. Defaults to no margin.
     margin = 10
 
+    # transform
+    # general transforms.
+    # currently, only `scale` is available
+    #   scale, <x-factor>, <y-factor>
+    # optional.
+    transform = scale, 3, 1
+
+    # Rotation
+    # counter-clockwise rotation in degrees
+    # If transform is specified, it will be done first.
+    # optional.
+    rotation = 45
+
+
 }
 

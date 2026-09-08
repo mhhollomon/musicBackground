@@ -4,6 +4,8 @@ import logging
 import os
 from pathlib import Path
 
+from .geometry import sizet
+
 def dictmerge(a: dict, b: dict) -> dict:
     """Merge b into a.
     'a' is modified in-place.
@@ -38,6 +40,32 @@ def clamped_mask(input : Image.Image, threshold : int = 10) -> Image.Image :
             return (x - threshold) * slope
 
     return input.convert('L').point(new_value)
+
+#----------------------------------------------------------------------------
+def resize_contain(img : Image.Image, needed_size : sizet, align : str, color : str | None = None) -> Image.Image :
+    img_size = sizet(img.size)
+
+    # Make the image as large as possible while making sure it fits
+    # entirely into container and maintains Aspect Ratio.
+    width_factor = needed_size.width / img_size.width
+    height_factor = needed_size.height / img_size.height
+    new_size = img_size * min(width_factor, height_factor)
+    img = img.resize(new_size.to_tuple())
+
+    if new_size != needed_size :
+        # it will be smaller
+        buffer = Image.new("RGBA", size=needed_size.to_tuple(), color=color)
+        if align == 'min' :
+            paste_pt = sizet(0, 0)
+        elif align == 'mid' :
+            paste_pt = (needed_size - new_size) // 2
+        else : # max
+            paste_pt = (needed_size - new_size)
+
+        buffer.paste(img, paste_pt.to_tuple())
+        img = buffer
+
+    return img
 
 #----------------------------------------------------------------------------
 

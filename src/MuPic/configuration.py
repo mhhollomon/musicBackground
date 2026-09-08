@@ -361,15 +361,37 @@ class Configuration(Transformer) :
 
     #
     # transform = scale, <xfactor>, <yfactor>
+    # transform = shear, <xdegrees> [, ydegrees]
     #
     @v_args(inline=True)
-    def transform_scale(self, xfactor : Token, yfactor : Token) -> OptionTuple :
-        scale_x = float(xfactor.value)
-        scale_y = float(yfactor.value)
+    def transform_option(self,  type_token : Token, one_token : Token, two_token : Token) -> OptionTuple :
 
-        if scale_x <= 0 or scale_y <= 0 :
-            raise MuParseError(f"transform scale factors must be greater than zero : ({scale_x}, {scale_y})")
-        return OptionTuple('transform', ('scale', scale_x, scale_y))
+        ttype = type_token.value.lower()
+
+        if ttype == "scale" :
+            scale_x = float(one_token.value)
+            scale_y = float(two_token.value)
+
+            if scale_x <= 0 or scale_y <= 0 :
+                raise MuParseError(f"transform scale factors must be greater than zero : ({scale_x}, {scale_y})")
+            return OptionTuple('transform', ('scale', scale_x, scale_y))
+        
+        elif ttype == 'shear' :
+            x_degrees = float(one_token.value)
+            if x_degrees < -90 or x_degrees > 90 :
+                raise MuParseError(f"transform shear is limited to between -90 and 90 degrees")
+            if two_token is None :
+                y_degrees = x_degrees
+            else :
+                y_degrees = float(two_token.value)
+                if y_degrees < -90 or y_degrees > 90 :
+                    raise MuParseError(f"transform shear is limited to between -90 and 90 degrees")
+
+            return OptionTuple('transform', ('shear', x_degrees, y_degrees))
+
+        else :
+            raise MuParseError(f"Unknown transform type `{ttype}`")
+
 
 
 
